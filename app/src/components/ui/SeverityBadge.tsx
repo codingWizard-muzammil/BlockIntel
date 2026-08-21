@@ -1,0 +1,23 @@
+import type { Severity } from "@/lib/analyzer-data";
+
+const styles: Record<Severity, string> = {
+  high: "text-danger border-danger/30",
+  medium: "text-warning border-warning/30",
+  low: "text-success border-success/30",
+};
+
+const labels: Record<Severity, string> = {
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+
+export function SeverityBadge({ severity }: { severity: Severity }) {
+  return (
+    <span
+      className={`shrink-0 rounded border px-[9px] py-[3px] text-xs leading-4 ${styles[severity]}`}
+    >
+      {labels[severity]}
+    </span>
+  );
+}
