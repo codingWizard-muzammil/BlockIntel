@@ -1,6 +1,8 @@
 const CorCrud = require("../utils/CorCrud");
-const { get, set, CACHE_CONFIG } = require("../utils/redis");
+const { get, set, del, CACHE_CONFIG } = require("../utils/redis");
 const { createToken } = require("../utils/jwt");
+const { buildSignMessage } = require("../utils/siwe");
+const { verifySignatureForChain } = require("../utils/verifySignature");
 const authTTL = CACHE_CONFIG.ttlByType.auth;
 const keyPrefix = CACHE_CONFIG.keyPrefixes.auth;
 const userModel = new CorCrud("Users");
@@ -9,33 +11,49 @@ const createNonce = async ({ address, chain }) => {
   const id = await crypto.randomUUID();
   const key = `${keyPrefix}:${id}`;
   const value = { address, chain };
-  set(key, value, authTTL);
+  await set(key, value, authTTL);
 
-  return { status: 200, json: { nonce: id } };
+  return {
+    status: 200,
+    json: { nonce: id, message: buildSignMessage({ address, chain, nonce: id }) },
+  };
 };
 
-const verifyNonce = async ({ nonce }) => {
-  const data = await get(`${keyPrefix}:${nonce}`);
+const verifyNonce = async ({ nonce, signature }) => {
+  const key = `${keyPrefix}:${nonce}`;
+  const data = await get(key);
 
   if (!data?.address || !data?.chain)
     return {
       json: { message: "Session may expire or not created" },
       status: 401,
     };
-  const { address, chain } = data;
 
-  const verifyToken = createToken({ address, chain });
+  const { address, chain } = data;
+  const message = buildSignMessage({ address, chain, nonce });
+
+  if (!verifySignatureForChain(chain, { message, signature, address }))
+    return { json: { message: "Invalid signature" }, status: 401 };
+
+  await del(key);
+
+  const accessToken = createToken({ address, chain });
   const refreshToken = createToken({ address, chain }, "1Y");
 
-  const userData = await userModel.create({
-    walletAddress: address,
-    chain,
-    verifyToken,
-  });
+  const userData = await userModel.upsert(
+    { walletAddress: address },
+    { walletAddress: address, chain, verifyToken: accessToken },
+    { chain, verifyToken: accessToken },
+  );
 
   return {
-    json: { message: `Wallet "${userData.walletAddress ?? ""}" authenticated` },
     status: 200,
+    json: {
+      message: `Wallet "${userData.walletAddress}" authenticated`,
+      accessToken,
+      refreshToken,
+      user: { walletAddress: userData.walletAddress, chain: userData.chain },
+    },
   };
 };
 

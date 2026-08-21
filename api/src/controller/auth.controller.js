@@ -4,15 +4,15 @@ const nonce = async (req, res) => {
 
   const { json, status } = await auth.createNonce({ chain, address });
 
-  res.json(json).status(status);
+  res.status(status).json(json);
 };
 
 const verifyNonce = async (req, res) => {
-  const { nonce } = req.query;
+  const { nonce, signature } = req.body;
 
-  const { json, status } = await auth.verifyNonce({ nonce });
+  const { json, status } = await auth.verifyNonce({ nonce, signature });
 
-  res.json(json).status(status);
+  res.status(status).json(json);
 };
 
 module.exports = { nonce, verifyNonce };
