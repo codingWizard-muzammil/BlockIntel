@@ -15,7 +15,6 @@ node_modules/
 # testing
 /coverage
 
-
 # production
 build/
 .next/
@@ -23,6 +22,7 @@ build/
 # misc
 .DS_Store
 *.pem
+*.log
 
 # debug
 npm-debug.log*
@@ -30,13 +30,16 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files 
 .env*
 
-# vercel
+# deploys
 .vercel/
 .netlify/
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma
+generated/
