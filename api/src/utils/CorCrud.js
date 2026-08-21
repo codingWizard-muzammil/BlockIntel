@@ -42,6 +42,15 @@ class CorCrud {
     }
   }
 
+  async upsert(where, create, update) {
+    try {
+      return await this.model.upsert({ where, create, update });
+    } catch (error) {
+      logger.error("CorCrud upsert error", { error: error.message });
+      throw error;
+    }
+  }
+
   async remove(where) {
     try {
       return await this.model.delete({ where });
