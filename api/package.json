@@ -1,0 +1,30 @@
+{
+  "name": "BlockIntel API",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon server.js",
+    "local": "env-cmd -f .env.local nodemon server.js",
+    "build": "next build",
+    "start": "node server.js",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "7.9.1",
+    "@upstash/redis": "^1.38.2",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "env-cmd": "^11.0.0",
+    "express": "^5.2.1",
+    "ioredis": "^6.0.0",
+    "joi": "^18.2.5",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.11.0",
+    "multer": "^2.2.0",
+    "pg": "^8.23.0",
+    "prisma": "^7.9.1",
+    "redis": "^6.2.1",
+    "winston": "^3.19.0"
+  }
+}
