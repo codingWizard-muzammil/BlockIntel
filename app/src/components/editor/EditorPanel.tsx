@@ -5,12 +5,26 @@ import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { FileTabs } from "@/components/editor/FileTabs";
 import { CodeEditor } from "@/components/editor/CodeEditor";
 import { EditorFooter } from "@/components/editor/EditorFooter";
+import { ProjectGate } from "@/components/editor/ProjectGate";
 import { clampPanelWidth, useEditorStore } from "@/store/editor-store";
+import { useProjectStore } from "@/store/project-store";
+import { useAuthStore } from "@/store/auth-store";
+import { useProjects } from "@/api/projects";
 import type { ContractAnalysis } from "@/lib/analyzer-data";
 
 export function EditorPanel({ analysis }: { analysis: ContractAnalysis }) {
   const sectionRef = useRef<HTMLElement>(null);
   const { panelWidth: width, setPanelWidth, loadAnalysis } = useEditorStore();
+  const authStatus = useAuthStore((s) => s.status);
+  const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const restoreProjects = useProjectStore((s) => s.restore);
+  const { data: projects } = useProjects();
+  const hasActiveProject =
+    authStatus === "connected" && !!projects?.some((p) => p.id === activeProjectId);
+
+  useEffect(() => {
+    restoreProjects();
+  }, [restoreProjects]);
 
   useEffect(() => {
     loadAnalysis(analysis);
@@ -83,12 +97,18 @@ export function EditorPanel({ analysis }: { analysis: ContractAnalysis }) {
       style={{ width }}
       className="relative flex min-h-0 shrink-0 flex-col border-r border-border"
     >
-      <EditorToolbar />
-      <FileTabs />
-      <div className="min-h-0 flex-1">
-        <CodeEditor />
-      </div>
-      <EditorFooter />
+      {hasActiveProject ? (
+        <>
+          <EditorToolbar />
+          <FileTabs />
+          <div className="min-h-0 flex-1">
+            <CodeEditor />
+          </div>
+          <EditorFooter />
+        </>
+      ) : (
+        <ProjectGate />
+      )}
       <div
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

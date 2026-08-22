@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Check,
   ChevronDown,
@@ -11,18 +11,8 @@ import {
 } from "lucide-react";
 import { CHAIN_LANGUAGES, CHAINS, useEditorStore } from "@/store/editor-store";
 import { ChainIcon } from "@/components/editor/chain-icons";
-
-function useClickOutside(ref: React.RefObject<HTMLElement | null>, onOutside: () => void) {
-  useEffect(() => {
-    function handlePointerDown(event: PointerEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        onOutside();
-      }
-    }
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [ref, onOutside]);
-}
+import { ProjectSwitcher } from "@/components/editor/ProjectSwitcher";
+import { useClickOutside } from "@/hooks/useClickOutside";
 
 function ChainBadge({ chain, selected }: { chain: string; selected?: boolean }) {
   return (
@@ -113,6 +103,8 @@ export function EditorToolbar() {
 
   return (
     <div className="flex h-14 shrink-0 items-center gap-4 border-b border-border px-4">
+      <ProjectSwitcher />
+
       <Dropdown
         label="Language"
         value={language}
