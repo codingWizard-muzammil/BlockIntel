@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Loader2, LogOut, Moon, ShieldCheck, Wallet } from "lucide-react";
+import { Loader2, LogOut, Moon, Wallet } from "lucide-react";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
@@ -90,9 +91,7 @@ export function Header() {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-canvas px-4">
       <div className="flex items-center gap-3">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-accent-soft-strong">
-          <ShieldCheck className="size-3.5 text-accent" />
-        </div>
+        <Image src="/logo.svg" alt="BlockIntel" width={20} height={27} className="h-8 w-auto" />
         <span className="text-lg font-semibold text-ink">BlockIntel</span>
         <span className="rounded bg-input px-1.5 py-0.5 text-[10px] font-semibold uppercase text-muted">
           BETA
