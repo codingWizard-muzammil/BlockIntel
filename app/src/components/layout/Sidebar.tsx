@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Code2, HelpCircle, History, Info, Settings } from "lucide-react";
+import { Code2, HelpCircle, History, Info } from "lucide-react";
 
 const topItems = [
   { href: "/contract/sample/summary", icon: Code2, label: "Analyzer", match: "/contract" },
   { href: "/history", icon: History, label: "History", match: "/history" },
-  { href: "/settings", icon: Settings, label: "Settings", match: "/settings" },
 ];
 
 const bottomItems = [
