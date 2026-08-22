@@ -11,10 +11,7 @@ interface WalletOptions {
   fn: () => void;
 }
 function WalletControl() {
-  const status = useAuthStore((s) => s.status);
-  const address = useAuthStore((s) => s.address);
-  const restore = useAuthStore((s) => s.restore);
-  const disconnect = useAuthStore((s) => s.disconnect);
+  const { status, address, restore, disconnect } = useAuthStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);

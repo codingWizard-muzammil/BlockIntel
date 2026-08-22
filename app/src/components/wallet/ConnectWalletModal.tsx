@@ -3,13 +3,26 @@
 import { useEffect, useState } from "react";
 import { Loader2, Wallet, X } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
-import { CHAIN_LABELS, discoverWalletProviders, type WalletProviderDetail } from "@/lib/wallet";
+import {
+  CHAIN_LABELS,
+  discoverWalletProviders,
+  type ChainFamily,
+  type WalletProviderDetail,
+} from "@/lib/wallet";
 
 type WalletGroup = {
   key: string;
   name: string;
   icon?: string;
   options: WalletProviderDetail[];
+};
+
+// Wallets that support multiple chains (e.g. MetaMask and Phantom now both
+// support Ethereum and Solana) connect on this chain by default instead of
+// prompting the user to pick one.
+const DEFAULT_CHAIN_BY_WALLET_NAME: Record<string, ChainFamily> = {
+  MetaMask: "ethereum",
+  Phantom: "solana",
 };
 
 function groupWalletsByName(wallets: WalletProviderDetail[]): WalletGroup[] {
@@ -119,8 +132,14 @@ export function ConnectWalletModal({
                 <Wallet className="size-4 text-muted" />
               );
 
-              if (group.options.length === 1) {
-                const wallet = group.options[0];
+              const defaultChain = DEFAULT_CHAIN_BY_WALLET_NAME[group.name];
+              const defaultWallet =
+                group.options.length === 1
+                  ? group.options[0]
+                  : group.options.find((option) => option.chain === defaultChain);
+
+              if (defaultWallet) {
+                const wallet = defaultWallet;
                 const isConnecting = connectingId === wallet.id;
                 return (
                   <button
