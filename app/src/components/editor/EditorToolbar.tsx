@@ -9,7 +9,8 @@ import {
   SlidersHorizontal,
   Settings2,
 } from "lucide-react";
-import { CHAINS, LANGUAGES, useEditorStore } from "@/store/editor-store";
+import { CHAIN_LANGUAGES, CHAINS, useEditorStore } from "@/store/editor-store";
+import { ChainIcon } from "@/components/editor/chain-icons";
 
 function useClickOutside(ref: React.RefObject<HTMLElement | null>, onOutside: () => void) {
   useEffect(() => {
@@ -23,16 +24,16 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, onOutside: ()
   }, [ref, onOutside]);
 }
 
-function SymbolBadge({ symbol, selected }: { symbol: string; selected?: boolean }) {
+function ChainBadge({ chain, selected }: { chain: string; selected?: boolean }) {
   return (
     <span
-      className={`flex h-5 min-w-5 shrink-0 items-center justify-center rounded px-1 text-[9px] font-semibold uppercase leading-none tracking-tight ${
+      className={`flex size-5 shrink-0 items-center justify-center rounded ${
         selected
           ? "border border-white/30 bg-white/15 text-white"
           : "border border-border bg-surface-muted text-muted"
       }`}
     >
-      {symbol}
+      <ChainIcon chain={chain} className="size-3" />
     </span>
   );
 }
@@ -115,7 +116,7 @@ export function EditorToolbar() {
       <Dropdown
         label="Language"
         value={language}
-        options={LANGUAGES}
+        options={CHAIN_LANGUAGES[chain]}
         getKey={(lang) => lang}
         onChange={setLanguage}
         trigger={language}
@@ -135,13 +136,13 @@ export function EditorToolbar() {
         onChange={(next) => setChain(next.name)}
         trigger={
           <>
-            <SymbolBadge symbol={activeChain.symbol} />
+            <ChainBadge chain={activeChain.name} />
             {chain}
           </>
         }
         renderOption={(c, selected) => (
           <>
-            <SymbolBadge symbol={c.symbol} selected={selected} />
+            <ChainBadge chain={c.name} selected={selected} />
             <span className="flex-1">{c.name}</span>
             {selected && <Check className="size-3 shrink-0" />}
           </>

@@ -2,19 +2,15 @@ import { create } from "zustand";
 import type { ContractAnalysis } from "@/lib/analyzer-data";
 import { formatSolidity } from "@/lib/format-solidity";
 
-export const LANGUAGES = ["Solidity", "Vyper", "Rust", "Move"];
-
+// Chains with a running node under chains/ — keep in sync with that folder.
 export const CHAINS = [
   { name: "Ethereum", symbol: "ETH" },
   { name: "Polygon", symbol: "POL" },
   { name: "BNB Chain", symbol: "BNB" },
   { name: "Arbitrum", symbol: "ARB" },
   { name: "Optimism", symbol: "OP" },
-  { name: "Base", symbol: "BASE" },
   { name: "Avalanche", symbol: "AVAX" },
   { name: "Solana", symbol: "SOL" },
-  { name: "NEAR", symbol: "NEAR" },
-  { name: "Aptos", symbol: "APT" },
 ];
 
 // Languages each chain's toolchain supports.
@@ -24,12 +20,12 @@ export const CHAIN_LANGUAGES: Record<string, string[]> = {
   "BNB Chain": ["Solidity"],
   Arbitrum: ["Solidity"],
   Optimism: ["Solidity"],
-  Base: ["Solidity"],
   Avalanche: ["Solidity"],
   Solana: ["Rust"],
-  NEAR: ["Rust"],
-  Aptos: ["Move"],
 };
+
+// Union of every language a supported chain can compile.
+export const LANGUAGES = Array.from(new Set(Object.values(CHAIN_LANGUAGES).flat()));
 
 export function chainsSupporting(language: string) {
   return CHAINS.filter((c) => CHAIN_LANGUAGES[c.name].includes(language));

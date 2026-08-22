@@ -3,6 +3,13 @@
 import Editor, { type BeforeMount } from "@monaco-editor/react";
 import { useEditorStore } from "@/store/editor-store";
 
+const MONACO_LANGUAGE_ID: Record<string, string> = {
+  Solidity: "solidity",
+  Vyper: "vyper",
+  Rust: "rust",
+  Move: "move",
+};
+
 const SOLIDITY_KEYWORDS = [
   "pragma",
   "solidity",
@@ -69,13 +76,119 @@ const SOLIDITY_TYPES = [
   "bytes32",
 ];
 
-const beforeMount: BeforeMount = (monaco) => {
-  const languages = monaco.languages.getLanguages();
-  if (languages.some((lang: { id: string }) => lang.id === "solidity")) return;
+const VYPER_KEYWORDS = [
+  "def",
+  "pass",
+  "if",
+  "elif",
+  "else",
+  "for",
+  "while",
+  "break",
+  "continue",
+  "return",
+  "event",
+  "struct",
+  "interface",
+  "implements",
+  "import",
+  "from",
+  "as",
+  "public",
+  "internal",
+  "external",
+  "payable",
+  "view",
+  "pure",
+  "nonpayable",
+  "indexed",
+  "constant",
+  "immutable",
+  "and",
+  "or",
+  "not",
+  "in",
+  "is",
+  "self",
+  "assert",
+  "raise",
+  "log",
+];
 
-  monaco.languages.register({ id: "solidity" });
+const VYPER_TYPES = [
+  "uint256",
+  "int128",
+  "int256",
+  "bool",
+  "address",
+  "bytes32",
+  "bytes",
+  "string",
+  "decimal",
+  "Bytes",
+  "String",
+  "HashMap",
+  "DynArray",
+];
 
-  monaco.languages.setLanguageConfiguration("solidity", {
+const MOVE_KEYWORDS = [
+  "module",
+  "script",
+  "use",
+  "fun",
+  "public",
+  "entry",
+  "native",
+  "struct",
+  "has",
+  "let",
+  "mut",
+  "if",
+  "else",
+  "while",
+  "loop",
+  "break",
+  "continue",
+  "return",
+  "abort",
+  "move",
+  "copy",
+  "borrow_global",
+  "borrow_global_mut",
+  "exists",
+  "move_to",
+  "move_from",
+  "acquires",
+  "friend",
+  "const",
+];
+
+const MOVE_TYPES = [
+  "u8",
+  "u16",
+  "u32",
+  "u64",
+  "u128",
+  "u256",
+  "bool",
+  "address",
+  "vector",
+  "signer",
+  "key",
+  "store",
+  "copy",
+  "drop",
+];
+
+function registerCLikeLanguage(
+  monaco: Parameters<BeforeMount>[0],
+  id: string,
+  keywords: string[],
+  typeKeywords: string[],
+) {
+  monaco.languages.register({ id });
+
+  monaco.languages.setLanguageConfiguration(id, {
     comments: { lineComment: "//", blockComment: ["/*", "*/"] },
     brackets: [
       ["{", "}"],
@@ -91,9 +204,9 @@ const beforeMount: BeforeMount = (monaco) => {
     ],
   });
 
-  monaco.languages.setMonarchTokensProvider("solidity", {
-    keywords: SOLIDITY_KEYWORDS,
-    typeKeywords: SOLIDITY_TYPES,
+  monaco.languages.setMonarchTokensProvider(id, {
+    keywords,
+    typeKeywords,
     operators: ["=", ">", "<", "!", "+", "-", "*", "/", "%", "=>", "&&", "||"],
     symbols: /[=><!~?:&|+\-*/^%]+/,
     tokenizer: {
@@ -127,6 +240,21 @@ const beforeMount: BeforeMount = (monaco) => {
       ],
     },
   });
+}
+
+const beforeMount: BeforeMount = (monaco) => {
+  const languages = monaco.languages.getLanguages();
+  const registered = new Set(languages.map((lang: { id: string }) => lang.id));
+
+  if (!registered.has("solidity")) {
+    registerCLikeLanguage(monaco, "solidity", SOLIDITY_KEYWORDS, SOLIDITY_TYPES);
+  }
+  if (!registered.has("vyper")) {
+    registerCLikeLanguage(monaco, "vyper", VYPER_KEYWORDS, VYPER_TYPES);
+  }
+  if (!registered.has("move")) {
+    registerCLikeLanguage(monaco, "move", MOVE_KEYWORDS, MOVE_TYPES);
+  }
 
   monaco.editor.defineTheme("blockintel-dark", {
     base: "vs-dark",
@@ -158,10 +286,11 @@ const beforeMount: BeforeMount = (monaco) => {
 export function CodeEditor() {
   const source = useEditorStore((s) => s.source);
   const setSource = useEditorStore((s) => s.setSource);
+  const language = useEditorStore((s) => s.language);
 
   return (
     <Editor
-      defaultLanguage="solidity"
+      language={MONACO_LANGUAGE_ID[language] ?? "plaintext"}
       value={source}
       theme="blockintel-dark"
       beforeMount={beforeMount}
