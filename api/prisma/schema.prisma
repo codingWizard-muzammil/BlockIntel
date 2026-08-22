@@ -12,20 +12,33 @@ datasource db {
 }
 
 model Users {
-  walletAddress String      @unique
+  walletAddress String     @unique
   verifyToken   String
   chain         String
-  contracts     contracts[] 
+  projects      projects[]
 
   @@map("users")
 }
 
-model contracts {
-  address      String @unique
+model projects {
+  id           String      @id @default(uuid())
+  name         String
   ownerAddress String
-  name                String @db.VarChar(150)
+  createdAt    DateTime    @default(now())
 
-  owner        Users  @relation(fields: [ownerAddress],references: [walletAddress])
+  owner        Users       @relation(fields: [ownerAddress], references: [walletAddress])
+  contracts    contracts[]
+
+  @@map("projects")
+}
+
+model contracts {
+  address      String   @unique
+  name         String   @db.VarChar(150)
+  projectId    String
+  ownerAddress String
+
+  project      projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("contracts")
 }
