@@ -17,7 +17,7 @@ export default async function SummaryPage(
         <div className="flex-1">
           <ContractSummaryCard summary={analysis.summary} />
         </div>
-        <div className="flex shrink-0 flex-col gap-6 lg:w-[300px]">
+        <div className="flex shrink-0 flex-col gap-6 lg:w-75">
           <KeyFeaturesCard features={analysis.keyFeatures} />
           <ContractDetailsCard details={analysis.details} />
         </div>

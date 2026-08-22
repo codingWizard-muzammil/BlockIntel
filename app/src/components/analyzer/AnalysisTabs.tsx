@@ -15,7 +15,7 @@ export function AnalysisTabs({ address }: { address: string }) {
   const pathname = usePathname();
 
   return (
-    <div className="flex items-start border-b border-border px-6">
+    <div className="scrollbar-editor flex items-start overflow-x-auto border-b border-border px-6">
       {tabs.map(({ slug, label, icon: Icon }) => {
         const href = `/contract/${address}/${slug}`;
         const active = pathname === href;
@@ -23,7 +23,7 @@ export function AnalysisTabs({ address }: { address: string }) {
           <Link
             key={slug}
             href={href}
-            className={`flex items-center gap-2 border-b-2 px-4 pb-[18px] pt-4 text-sm transition-colors ${
+            className={`flex shrink-0 items-center gap-2 border-b-2 px-4 pb-4.5 pt-4 text-sm whitespace-nowrap transition-colors ${
               active
                 ? "border-accent text-accent"
                 : "border-transparent text-muted hover:text-ink"

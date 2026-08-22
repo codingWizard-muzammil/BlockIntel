@@ -13,7 +13,9 @@ export default async function ContractLayout(
       <EditorPanel analysis={analysis} />
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <AnalysisTabs address={address} />
-        <div className="min-h-0 flex-1 overflow-auto p-6">{props.children}</div>
+        <div className="min-h-0 flex-1 overflow-auto p-6 scrollbar-editor overflow-x-auto">
+          {props.children}
+        </div>
       </section>
     </div>
   );
