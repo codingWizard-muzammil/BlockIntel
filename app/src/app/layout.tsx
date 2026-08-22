@@ -23,8 +23,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="h-full flex flex-col overflow-hidden bg-canvas text-ink font-sans">
-        {children}
+      <body
+        className="h-full flex flex-col overflow-hidden bg-canvas text-ink font-sans"
+        suppressHydrationWarning
+      >
       </body>
     </html>
   );
