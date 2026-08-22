@@ -6,7 +6,7 @@ import { Code2, HelpCircle, History, Info } from "lucide-react";
 
 const topItems = [
   { href: "/contract/sample/summary", icon: Code2, label: "Analyzer", match: "/contract" },
-  { href: "/history", icon: History, label: "History", match: "/history" },
+  { href: "/projects", icon: History, label: "Projects", match: "/projects" },
 ];
 
 const bottomItems = [
