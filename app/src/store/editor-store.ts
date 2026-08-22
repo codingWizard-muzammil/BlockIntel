@@ -37,10 +37,37 @@ export function chainsSupporting(language: string) {
 
 const MIN_PANEL_WIDTH = 380;
 const MAX_PANEL_WIDTH = 800;
-const DEFAULT_PANEL_WIDTH = 500;
+const DEFAULT_PANEL_WIDTH = 590;
+const STORED_WIDTH =
+  typeof window !== "undefined"
+    ? Number(localStorage.getItem("editorWidth") ?? 0)
+    : 0;
+
+function getDefaultWidth() {
+  if (!STORED_WIDTH) {
+    clampPanelWidth(DEFAULT_PANEL_WIDTH);
+    return DEFAULT_PANEL_WIDTH;
+  }
+
+  if (STORED_WIDTH > MAX_PANEL_WIDTH) {
+    clampPanelWidth(MAX_PANEL_WIDTH);
+    return MAX_PANEL_WIDTH;
+  }
+
+  if (STORED_WIDTH < MIN_PANEL_WIDTH) {
+    clampPanelWidth(MIN_PANEL_WIDTH);
+    return MIN_PANEL_WIDTH;
+  }
+
+  return DEFAULT_PANEL_WIDTH;
+}
 
 export function clampPanelWidth(width: number) {
-  return Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, width));
+  const newWidth = Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, width));
+  window
+  localStorage.setItem("editorWidth", String(newWidth));
+
+  return newWidth;
 }
 
 type EditorState = {
@@ -67,7 +94,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   language: LANGUAGES[0],
   chain: CHAINS[0].name,
   autoSync: true,
-  panelWidth: DEFAULT_PANEL_WIDTH,
+  panelWidth: getDefaultWidth(),
   source: "",
   compileStatus: { solidityVersion: "", ok: false, gas: "", time: "" },
 
@@ -94,7 +121,9 @@ export const useEditorStore = create<EditorState>((set) => ({
     set((state) => {
       if (!state.autoSync) return { chain };
       const supported = CHAIN_LANGUAGES[chain];
-      const language = supported.includes(state.language) ? state.language : supported[0];
+      const language = supported.includes(state.language)
+        ? state.language
+        : supported[0];
       return { chain, language };
     }),
 
@@ -106,5 +135,6 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   clearSource: () => set({ source: "" }),
 
-  formatSource: () => set((state) => ({ source: formatSolidity(state.source) })),
+  formatSource: () =>
+    set((state) => ({ source: formatSolidity(state.source) })),
 }));

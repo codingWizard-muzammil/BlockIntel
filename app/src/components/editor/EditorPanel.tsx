@@ -10,9 +10,7 @@ import type { ContractAnalysis } from "@/lib/analyzer-data";
 
 export function EditorPanel({ analysis }: { analysis: ContractAnalysis }) {
   const sectionRef = useRef<HTMLElement>(null);
-  const width = useEditorStore((s) => s.panelWidth);
-  const setPanelWidth = useEditorStore((s) => s.setPanelWidth);
-  const loadAnalysis = useEditorStore((s) => s.loadAnalysis);
+  const { panelWidth: width, setPanelWidth, loadAnalysis } = useEditorStore();
 
   useEffect(() => {
     loadAnalysis(analysis);
@@ -29,35 +27,49 @@ export function EditorPanel({ analysis }: { analysis: ContractAnalysis }) {
     }
   }, []);
 
-  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    dragOrigin.current = { x: event.clientX, width: sectionRef.current?.offsetWidth ?? width };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, [width]);
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      dragOrigin.current = {
+        x: event.clientX,
+        width: sectionRef.current?.offsetWidth ?? width,
+      };
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [width],
+  );
 
-  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    const origin = dragOrigin.current;
-    if (!origin) return;
-    pendingWidth.current = clampPanelWidth(origin.width + (event.clientX - origin.x));
-    if (rafId.current == null) {
-      rafId.current = requestAnimationFrame(applyPendingWidth);
-    }
-  }, [applyPendingWidth]);
+  const handlePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const origin = dragOrigin.current;
+      if (!origin) return;
+      pendingWidth.current = clampPanelWidth(
+        origin.width + (event.clientX - origin.x),
+      );
+      if (rafId.current == null) {
+        rafId.current = requestAnimationFrame(applyPendingWidth);
+      }
+    },
+    [applyPendingWidth],
+  );
 
-  const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragOrigin.current) return;
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    dragOrigin.current = null;
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-    if (rafId.current != null) {
-      cancelAnimationFrame(rafId.current);
-      rafId.current = null;
-    }
-    setPanelWidth(pendingWidth.current);
-  }, [setPanelWidth]);
+  const handlePointerUp = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!dragOrigin.current) return;
+      event.currentTarget.releasePointerCapture(event.pointerId);
+      dragOrigin.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      if (rafId.current != null) {
+        cancelAnimationFrame(rafId.current);
+        rafId.current = null;
+      }
+      setPanelWidth(pendingWidth.current);
+    },
+    [setPanelWidth],
+  );
 
   useEffect(() => {
     return () => {
