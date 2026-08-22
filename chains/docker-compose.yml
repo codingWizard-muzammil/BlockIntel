@@ -1,0 +1,55 @@
+services:
+  ethereum:
+    build: ./ethereum
+    container_name: blockintel-chain-ethereum
+    ports:
+      - "8545:8545"
+    restart: unless-stopped
+
+  bnb:
+    build: ./bnb
+    container_name: blockintel-chain-bnb
+    ports:
+      - "8546:8545"
+    restart: unless-stopped
+
+  avalanche:
+    build: ./avalanche
+    container_name: blockintel-chain-avalanche
+    ports:
+      - "8547:8545"
+    restart: unless-stopped
+
+  polygon:
+    build: ./polygon
+    container_name: blockintel-chain-polygon
+    ports:
+      - "8548:8545"
+    restart: unless-stopped
+
+  arbitrum:
+    build: ./arbitrum
+    container_name: blockintel-chain-arbitrum
+    ports:
+      - "8549:8545"
+    restart: unless-stopped
+
+  optimism:
+    build: ./optimism
+    container_name: blockintel-chain-optimism
+    ports:
+      - "8550:8545"
+    restart: unless-stopped
+
+  solana:
+    build: ./solana
+    container_name: blockintel-chain-solana
+    ports:
+      - "8899:8899"
+      - "8900:8900"
+      - "9900:9900"
+    restart: unless-stopped
+
+# To add another chain: create ./<chain>/Dockerfile, then add a service
+# block here pointing `build:` at that folder. `docker compose up --build`
+# starts every chain in this file.

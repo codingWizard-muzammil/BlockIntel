@@ -1,0 +1,10 @@
+{
+  "name": "blockintel-chain-ethereum",
+  "private": true,
+  "scripts": {
+    "node": "hardhat node --hostname 0.0.0.0"
+  },
+  "devDependencies": {
+    "hardhat": "^2.22.0"
+  }
+}
