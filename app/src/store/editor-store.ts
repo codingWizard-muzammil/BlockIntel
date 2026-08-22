@@ -24,6 +24,12 @@ export const CHAIN_LANGUAGES: Record<string, string[]> = {
   Solana: ["Rust"],
 };
 
+export const EXTENSION_BY_LANGUAGE = {
+  "solidity": "sol",
+  "vyper": "vyper",
+  "rust": "rs"
+}
+
 // Union of every language a supported chain can compile.
 export const LANGUAGES = Array.from(new Set(Object.values(CHAIN_LANGUAGES).flat()));
 
@@ -76,6 +82,7 @@ type EditorState = {
   compileStatus: ContractAnalysis["compileStatus"];
 
   loadAnalysis: (analysis: ContractAnalysis) => void;
+  setFileName: (fileName: string) => void;
   setLanguage: (language: string) => void;
   setChain: (chain: string) => void;
   toggleAutoSync: () => void;
@@ -102,6 +109,8 @@ export const useEditorStore = create<EditorState>((set) => ({
       source: analysis.sourceCode,
       compileStatus: analysis.compileStatus,
     }),
+
+  setFileName: (fileName) => set({ fileName }),
 
   setLanguage: (language) =>
     set((state) => {

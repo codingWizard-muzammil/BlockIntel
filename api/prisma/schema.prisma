@@ -23,6 +23,7 @@ model Users {
 model contracts {
   address      String @unique
   ownerAddress String
+  name                String @db.VarChar(150)
 
   owner        Users  @relation(fields: [ownerAddress],references: [walletAddress])
 
