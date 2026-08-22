@@ -1,4 +1,5 @@
 export type Severity = "high" | "medium" | "low";
+export type extensions = "sol" | "vyper" | "rs" | "move" | "";
 
 export type ContractSummary = {
   description: string[];
@@ -33,6 +34,7 @@ export type Improvement = {
 };
 
 export type ContractAnalysis = {
+  extension: extensions;
   address: string;
   fileName: string;
   language: string;
@@ -94,6 +96,7 @@ const sampleAnalysis: ContractAnalysis = {
   address: "sample",
   fileName: "Contract.sol",
   language: "Solidity",
+  extension: "sol",
   chain: "Ethereum",
   sourceCode: sampleVaultSource,
   compileStatus: {

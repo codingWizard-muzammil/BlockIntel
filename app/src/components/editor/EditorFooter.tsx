@@ -4,8 +4,7 @@ import { useEditorStore } from "@/store/editor-store";
 
 export function EditorFooter() {
   const status = useEditorStore((s) => s.compileStatus);
-  const clearSource = useEditorStore((s) => s.clearSource);
-  const formatSource = useEditorStore((s) => s.formatSource);
+  const { clearSource, formatSource } = useEditorStore();
 
   return (
     <div className="flex shrink-0 flex-col gap-4 border-t border-border px-4 pb-4 pt-4.25">
@@ -31,7 +30,7 @@ export function EditorFooter() {
       <div className="flex items-start gap-2">
         <Button variant="primary" className="flex-1">
           <Play className="size-[10.5px]" />
-          Compile
+          Compile & Analyze
         </Button>
         <Button variant="secondary" onClick={formatSource}>
           <AlignLeft className="size-[10.5px]" />
