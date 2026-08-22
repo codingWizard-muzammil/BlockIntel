@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Wallet, X } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
+import { useConnectWallet } from "@/api/auth";
 import {
   CHAIN_LABELS,
   discoverWalletProviders,
@@ -47,7 +48,7 @@ export function ConnectWalletModal({
 }) {
   const status = useAuthStore((s) => s.status);
   const error = useAuthStore((s) => s.error);
-  const connect = useAuthStore((s) => s.connect);
+  const connectWallet = useConnectWallet();
 
   const [wallets, setWallets] = useState<WalletProviderDetail[] | null>(null);
   const [connectingId, setConnectingId] = useState<string | null>(null);
@@ -83,7 +84,7 @@ export function ConnectWalletModal({
 
   async function handleSelect(wallet: WalletProviderDetail) {
     setConnectingId(wallet.id);
-    await connect(wallet);
+    await connectWallet.mutateAsync(wallet).catch(() => {});
     setConnectingId(null);
   }
 

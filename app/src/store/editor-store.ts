@@ -64,8 +64,8 @@ function getDefaultWidth() {
 
 export function clampPanelWidth(width: number) {
   const newWidth = Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, width));
-  window
-  localStorage.setItem("editorWidth", String(newWidth));
+  if (typeof window !== "undefined")
+    localStorage.setItem("editorWidth", String(newWidth));
 
   return newWidth;
 }

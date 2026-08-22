@@ -1,8 +1,6 @@
 "use client";
 
 import { create } from "zustand";
-import { fetchNonce, verifySignature } from "@/lib/api";
-import type { WalletProviderDetail } from "@/lib/wallet";
 
 const STORAGE_KEY = "blockintel-auth";
 
@@ -23,7 +21,9 @@ type AuthState = {
   refreshToken: string | null;
   error: string | null;
   restore: () => void;
-  connect: (wallet: WalletProviderDetail) => Promise<void>;
+  setConnecting: () => void;
+  setSession: (session: StoredSession) => void;
+  setError: (message: string) => void;
   disconnect: () => void;
 };
 
@@ -58,32 +58,25 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (session) set({ status: "connected", ...session, error: null });
   },
 
-  connect: async (wallet) => {
+  setConnecting: () => {
     set({ status: "connecting", error: null });
-    try {
-      const { address } = await wallet.connect();
-      const { nonce, message } = await fetchNonce(address, wallet.chain);
-      const signature = await wallet.sign(address, message);
-      const { accessToken, refreshToken, user } = await verifySignature(nonce, signature);
+  },
 
-      const session: StoredSession = {
-        address: user.walletAddress,
-        chain: user.chain,
-        accessToken,
-        refreshToken,
-      };
-      writeStoredSession(session);
-      set({ status: "connected", ...session, error: null });
-    } catch (error) {
-      set({
-        status: "disconnected",
-        address: null,
-        chain: null,
-        accessToken: null,
-        refreshToken: null,
-        error: error instanceof Error ? error.message : "Failed to connect wallet",
-      });
-    }
+  setSession: (session) => {
+    writeStoredSession(session);
+    set({ status: "connected", ...session, error: null });
+  },
+
+  setError: (message) => {
+    writeStoredSession(null);
+    set({
+      status: "disconnected",
+      address: null,
+      chain: null,
+      accessToken: null,
+      refreshToken: null,
+      error: message,
+    });
   },
 
   disconnect: () => {
