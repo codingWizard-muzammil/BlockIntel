@@ -59,6 +59,15 @@ class CorCrud {
       throw error;
     }
   }
+
+  async removeMany(where) {
+    try {
+      return await this.model.deleteMany({ where });
+    } catch (error) {
+      logger.error("CorCrud removeMany error", { error: error.message });
+      throw error;
+    }
+  }
 }
 
 module.exports = CorCrud;
