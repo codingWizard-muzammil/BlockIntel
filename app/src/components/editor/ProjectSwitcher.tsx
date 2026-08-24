@@ -1,13 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Check, ChevronDown, FolderKanban, Plus, Trash2 } from "lucide-react";
-import { useProjectStore } from "@/store/project-store";
-import { useDeleteProject, useProjects, type ApiProject } from "@/api/projects";
+import { Check, FolderKanban, Plus } from "lucide-react";
+import {
+  useProjectStore,
+  useDeleteProject,
+  useProjects,
+  type ApiProject,
+} from "@/store/project-store";
 import { CreateProjectModal } from "@/components/editor/CreateProjectModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { useClickOutside } from "@/hooks/useClickOutside";
+import Dropdown from "@/components/ui/Dropdown";
 
 export function ProjectSwitcher() {
   const router = useRouter();
@@ -17,11 +21,8 @@ export function ProjectSwitcher() {
   const activeProject = projects.find((p) => p.id === activeProjectId);
   const deleteProject = useDeleteProject();
 
-  const [open, setOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<ApiProject | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  useClickOutside(containerRef, () => setOpen(false));
 
   function handleConfirmDelete() {
     if (!pendingDelete) return;
@@ -31,53 +32,37 @@ export function ProjectSwitcher() {
   }
 
   return (
-    <div className="relative" ref={containerRef}>
-      <span className="absolute -top-1.75 left-2.5 z-10 bg-canvas px-1 text-[10px] leading-none text-muted">
-        Project
-      </span>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="flex max-w-40 items-center gap-2 rounded-md border border-border bg-input py-1.75 pl-3 pr-2.5 text-xs text-ink outline-none hover:border-muted"
-      >
-        <FolderKanban className="size-3 shrink-0 text-muted" />
-        <span className="truncate">
-          {activeProject?.name ?? "Select project"}
-        </span>
-        <ChevronDown
-          className={`size-2.5 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-[calc(100%+6px)] z-20 min-w-48 overflow-hidden rounded-lg border border-border bg-surface p-1 shadow-xl shadow-black/40">
-          {projects.map((project) => {
-            const selected = project.id === activeProjectId;
-            return (
-              <div
-                key={project.id}
-                className={`group flex w-full items-center gap-1 rounded-md text-xs transition-colors hover:bg-accent hover:text-white`}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveProjectId(project.id);
-                    setOpen(false);
-                    router.replace(`/contract/${project.id}/summary`);
-                  }}
-                  className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5 text-left"
-                >
-                  <span className="flex-1 truncate">{project.name}</span>
-                  {selected && <Check className="size-3 shrink-0" />}
-                </button>
-              </div>
-            );
-          })}
-          <div className="my-1 h-px bg-border" />
+    <>
+      <Dropdown
+        label="Project"
+        value={activeProjectId ?? ""}
+        options={projects}
+        getKey={(project) => project.id}
+        onChange={(project) => {
+          setActiveProjectId(project.id);
+          router.replace(`/contract/${project.id}/summary`);
+        }}
+        trigger={
+          <>
+            <FolderKanban className="size-3 shrink-0 text-muted" />
+            <span className="truncate">
+              {activeProject?.name ?? "Select project"}
+            </span>
+          </>
+        }
+        renderOption={(project, selected) => (
+          <>
+            <span className="flex-1 truncate">{project.name}</span>
+            {selected && <Check className="size-3 shrink-0" />}
+          </>
+        )}
+        triggerClassName="max-w-40"
+        menuClassName="min-w-48"
+        footer={(close) => (
           <button
             type="button"
             onClick={() => {
-              setOpen(false);
+              close();
               setModalOpen(true);
             }}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs text-accent transition-colors hover:bg-surface-muted"
@@ -85,12 +70,9 @@ export function ProjectSwitcher() {
             <Plus className="size-3 shrink-0" />
             New project
           </button>
-        </div>
-      )}
-      <CreateProjectModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        )}
       />
+      <CreateProjectModal open={modalOpen} onClose={() => setModalOpen(false)} />
       <ConfirmDialog
         open={!!pendingDelete}
         title="Delete project"
@@ -103,6 +85,6 @@ export function ProjectSwitcher() {
         onConfirm={handleConfirmDelete}
         onClose={() => setPendingDelete(null)}
       />
-    </div>
+    </>
   );
 }
