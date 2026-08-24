@@ -7,11 +7,11 @@ import { useDeleteProject, useProjects, type ApiProject } from "@/api/projects";
 import { CreateProjectModal } from "@/components/editor/CreateProjectModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useClickOutside } from "@/hooks/useClickOutside";
+import { redirect } from "next/navigation";
 
 export function ProjectSwitcher() {
   const { data: projects = [] } = useProjects();
-  const activeProjectId = useProjectStore((s) => s.activeProjectId);
-  const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
+  const {activeProjectId, setActiveProjectId} = useProjectStore();
   const activeProject = projects.find((p) => p.id === activeProjectId);
   const deleteProject = useDeleteProject();
 
@@ -40,7 +40,9 @@ export function ProjectSwitcher() {
         className="flex max-w-40 items-center gap-2 rounded-md border border-border bg-input py-1.75 pl-3 pr-2.5 text-xs text-ink outline-none hover:border-muted"
       >
         <FolderKanban className="size-3 shrink-0 text-muted" />
-        <span className="truncate">{activeProject?.name ?? "Select project"}</span>
+        <span className="truncate">
+          {activeProject?.name ?? "Select project"}
+        </span>
         <ChevronDown
           className={`size-2.5 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
         />
@@ -52,34 +54,19 @@ export function ProjectSwitcher() {
             return (
               <div
                 key={project.id}
-                className={`group flex w-full items-center gap-1 rounded-md text-xs transition-colors ${
-                  selected ? "bg-accent text-white" : "text-ink hover:bg-surface-muted"
-                }`}
+                className={`group flex w-full items-center gap-1 rounded-md text-xs transition-colors hover:bg-accent hover:text-white`}
               >
                 <button
                   type="button"
                   onClick={() => {
                     setActiveProjectId(project.id);
                     setOpen(false);
+                    redirect(`/contract/${project.id}/summary`, "replace");
                   }}
                   className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5 text-left"
                 >
                   <span className="flex-1 truncate">{project.name}</span>
                   {selected && <Check className="size-3 shrink-0" />}
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Delete ${project.name}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setOpen(false);
-                    setPendingDelete(project);
-                  }}
-                  className={`mr-1 shrink-0 rounded p-1 opacity-0 transition-colors group-hover:opacity-100 ${
-                    selected ? "hover:bg-white/20" : "hover:text-danger"
-                  }`}
-                >
-                  <Trash2 className="size-3" />
                 </button>
               </div>
             );
@@ -98,14 +85,19 @@ export function ProjectSwitcher() {
           </button>
         </div>
       )}
-      <CreateProjectModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <CreateProjectModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+      />
       <ConfirmDialog
         open={!!pendingDelete}
         title="Delete project"
         description={`This will permanently delete "${pendingDelete?.name}" and all of its contracts. This can't be undone.`}
         confirmLabel="Delete"
         isPending={deleteProject.isPending}
-        errorMessage={deleteProject.isError ? (deleteProject.error as Error).message : null}
+        errorMessage={
+          deleteProject.isError ? (deleteProject.error as Error).message : null
+        }
         onConfirm={handleConfirmDelete}
         onClose={() => setPendingDelete(null)}
       />

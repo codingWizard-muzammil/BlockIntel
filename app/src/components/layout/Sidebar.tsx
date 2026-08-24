@@ -1,13 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Code2, HelpCircle, History, Info } from "lucide-react";
-
-const topItems = [
-  { href: "/contract/sample/summary", icon: Code2, label: "Analyzer", match: "/contract" },
-  { href: "/projects", icon: History, label: "Projects", match: "/projects" },
-];
+import { useProjectStore } from "@/store/project-store";
 
 const bottomItems = [
   { href: "#", icon: HelpCircle, label: "Help" },
@@ -16,6 +13,22 @@ const bottomItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const restore = useProjectStore((s) => s.restore);
+
+  useEffect(() => {
+    restore();
+  }, [restore]);
+
+  const topItems = [
+    {
+      href: activeProjectId ? `/contract/${activeProjectId}/summary` : "/projects",
+      icon: Code2,
+      label: "Analyzer",
+      match: "/contract",
+    },
+    { href: "/projects", icon: History, label: "Projects", match: "/projects" },
+  ];
 
   return (
     <aside className="flex w-14 shrink-0 flex-col items-center gap-6 border-r border-border bg-canvas py-4">
