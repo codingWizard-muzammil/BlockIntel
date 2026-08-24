@@ -17,7 +17,7 @@ export function ContractSummaryCard({ summary }: { summary: ContractSummary | nu
       <CardHeading icon={FileText}>Contract Summary</CardHeading>
       {summary ? (
         <>
-          <p className="mb-[10px] text-sm leading-[22.75px] text-muted">
+          <p className="mb-2.5 text-sm leading-[22.75px] text-muted">
             {summary.description.map((line, i) => (
               <span key={i}>
                 {line}

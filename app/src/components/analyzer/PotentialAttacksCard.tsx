@@ -6,7 +6,7 @@ import type { AttackScenario } from "@/types/analysis";
 
 function AttackItem({ attack, index }: { attack: AttackScenario; index: number }) {
   return (
-    <div className="w-full rounded-lg border border-border-muted bg-surface-muted p-[17px]">
+    <div className="w-full rounded-lg border border-border-muted bg-surface-muted p-4.25">
       <div className="mb-2 flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-ink">
           {index}. {attack.title}

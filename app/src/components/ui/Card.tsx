@@ -9,7 +9,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`bg-surface border border-border rounded-xl p-[25px] ${className}`}
+      className={`bg-surface border border-border rounded-xl p-6.25 ${className}`}
     >
       {children}
     </div>
@@ -27,10 +27,10 @@ export function CardHeading({
 }) {
   return (
     <div
-      className={`flex items-center gap-2 ${size === "lg" ? "text-lg mb-[15px]" : "text-base mb-4"}`}
+      className={`flex items-center gap-2 ${size === "lg" ? "text-lg mb-3.75" : "text-base mb-4"}`}
     >
       <Icon
-        className={size === "lg" ? "size-[18px] text-accent" : "size-4 text-accent"}
+        className={size === "lg" ? "size-4.5 text-accent" : "size-4 text-accent"}
       />
       <h2 className="font-semibold text-ink">{children}</h2>
     </div>
