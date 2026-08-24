@@ -1,9 +1,13 @@
 const CorCrud = require("../utils/CorCrud");
 
 const projectModel = new CorCrud("projects");
+const contractModel = new CorCrud("contracts");
 
 const createProject = async ({ name, ownerAddress }) => {
-  const project = await projectModel.create({ name, ownerAddress });
+  const project = await projectModel.create({
+    name,
+    ownerAddress,
+  });
 
   return { status: 201, json: { project } };
 };
@@ -12,6 +16,10 @@ const listProjects = async ({ ownerAddress }) => {
   const projects = await projectModel.findMany({
     where: { ownerAddress },
     orderBy: { createdAt: "desc" },
+  });
+
+  projects.map((project) => {
+    project.contracts = project.contracts ?? [];
   });
 
   return { status: 200, json: { projects } };
