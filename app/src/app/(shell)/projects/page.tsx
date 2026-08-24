@@ -7,8 +7,12 @@ import { ComingSoon } from "@/components/ui/ComingSoon";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CreateProjectModal } from "@/components/editor/CreateProjectModal";
 import { useAuthStore } from "@/store/auth-store";
-import { useProjectStore } from "@/store/project-store";
-import { useDeleteProject, useProjects, type ApiProject } from "@/api/projects";
+import {
+  useProjectStore,
+  useDeleteProject,
+  useProjects,
+  type ApiProject,
+} from "@/store/project-store";
 import { Button } from "@/components/ui/Button";
 
 export default function HistoryPage() {

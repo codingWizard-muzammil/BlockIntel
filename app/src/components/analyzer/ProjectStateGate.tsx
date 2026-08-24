@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { FolderX, Loader2, Wallet } from "lucide-react";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { useAuthStore } from "@/store/auth-store";
-import { useProject, type ApiProject } from "@/api/projects";
+import { useProject, type ApiProject } from "@/store/project-store";
 
 export function ProjectStateGate({
   projectId,

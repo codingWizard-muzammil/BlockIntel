@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { useProjectStore } from "@/store/project-store";
-import { useCreateProject } from "@/api/projects";
+import { useProjectStore, useCreateProject } from "@/store/project-store";
 
 export function CreateProjectModal({
   open,

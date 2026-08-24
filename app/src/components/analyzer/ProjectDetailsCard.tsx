@@ -1,7 +1,7 @@
 import { Settings } from "lucide-react";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { truncateAddress } from "@/helpers/address";
-import type { ApiProject } from "@/api/projects";
+import type { ApiProject } from "@/store/project-store";
 
 export function ProjectDetailsCard({ project }: { project: ApiProject }) {
   const rows: [string, string][] = [
