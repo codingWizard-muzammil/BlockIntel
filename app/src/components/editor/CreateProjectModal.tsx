@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useProjectStore } from "@/store/project-store";
@@ -13,6 +14,7 @@ export function CreateProjectModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const createProject = useCreateProject();
   const [name, setName] = useState("");
@@ -44,6 +46,7 @@ export function CreateProjectModal({
       onSuccess: (project) => {
         setActiveProjectId(project.id);
         handleClose();
+        router.push(`/contract/${project.id}/summary`);
       },
     });
   }

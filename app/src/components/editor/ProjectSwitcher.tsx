@@ -1,17 +1,19 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Check, ChevronDown, FolderKanban, Plus, Trash2 } from "lucide-react";
 import { useProjectStore } from "@/store/project-store";
 import { useDeleteProject, useProjects, type ApiProject } from "@/api/projects";
 import { CreateProjectModal } from "@/components/editor/CreateProjectModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useClickOutside } from "@/hooks/useClickOutside";
-import { redirect } from "next/navigation";
 
 export function ProjectSwitcher() {
+  const router = useRouter();
+  const { id: activeProjectId } = useParams<{ id: string }>();
   const { data: projects = [] } = useProjects();
-  const {activeProjectId, setActiveProjectId} = useProjectStore();
+  const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const activeProject = projects.find((p) => p.id === activeProjectId);
   const deleteProject = useDeleteProject();
 
@@ -61,7 +63,7 @@ export function ProjectSwitcher() {
                   onClick={() => {
                     setActiveProjectId(project.id);
                     setOpen(false);
-                    redirect(`/contract/${project.id}/summary`, "replace");
+                    router.replace(`/contract/${project.id}/summary`);
                   }}
                   className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5 text-left"
                 >
