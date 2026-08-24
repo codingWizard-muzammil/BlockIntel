@@ -11,13 +11,13 @@ const tabs = [
   { slug: "playground", label: "Playground", icon: FlaskConical },
 ];
 
-export function AnalysisTabs({ address }: { address: string }) {
+export function AnalysisTabs({ id }: { id: string }) {
   const pathname = usePathname();
 
   return (
     <div className="scrollbar-editor flex items-start overflow-x-auto border-b border-border px-6">
       {tabs.map(({ slug, label, icon: Icon }) => {
-        const href = `/contract/${address}/${slug}`;
+        const href = `/contract/${id}/${slug}`;
         const active = pathname === href;
         return (
           <Link
