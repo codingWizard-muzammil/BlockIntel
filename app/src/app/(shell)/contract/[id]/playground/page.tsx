@@ -1,12 +1,9 @@
-import { FlaskConical } from "lucide-react";
-import { ComingSoon } from "@/components/ui/ComingSoon";
+import { PlaygroundView } from "@/components/analyzer/PlaygroundView";
 
-export default function PlaygroundPage() {
-  return (
-    <ComingSoon
-      icon={FlaskConical}
-      title="Playground"
-      description="Simulate transactions against this contract and inspect the results here."
-    />
-  );
+export default async function PlaygroundPage(
+  props: PageProps<"/contract/[id]/playground">,
+) {
+  const { id } = await props.params;
+
+  return <PlaygroundView projectId={id} />;
 }
