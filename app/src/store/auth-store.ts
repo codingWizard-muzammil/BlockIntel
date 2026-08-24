@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/query-client";
 import { fetchMe, fetchNonce, verifySignature } from "@/api/auth";
 import type { WalletProviderDetail } from "@/lib/wallet";
 
@@ -22,11 +22,10 @@ type AuthState = {
   chain: string | null;
   accessToken: string | null;
   refreshToken: string | null;
-  error: string | null;
-  hydrate: () => Promise<void>;
-  setConnecting: () => void;
+  connectError: string | null;
+  checkAuth: () => Promise<void>;
+  connectWallet: (wallet: WalletProviderDetail) => Promise<boolean>;
   setSession: (session: StoredSession) => void;
-  setError: (message: string) => void;
   disconnect: () => void;
 };
 
@@ -54,9 +53,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   chain: null,
   accessToken: null,
   refreshToken: null,
-  error: null,
+  connectError: null,
 
-  hydrate: async () => {
+  checkAuth: async () => {
     if (get().status !== "restoring") return;
 
     const session = readStoredSession();
@@ -67,10 +66,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Set the token first so the request interceptor picks it up, then
     // confirm the session against the backend before trusting it.
-    set({ ...session, error: null });
+    set({ ...session });
 
     try {
-      const { user } = await fetchMe();
+      const { user } = await queryClient.fetchQuery({
+        queryKey: ["me"],
+        queryFn: fetchMe,
+      });
       const confirmed: StoredSession = {
         address: user.walletAddress,
         chain: user.chain,
@@ -78,7 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         refreshToken: session.refreshToken,
       };
       writeStoredSession(confirmed);
-      set({ status: "connected", ...confirmed, error: null });
+      set({ status: "connected", ...confirmed });
     } catch {
       writeStoredSession(null);
       set({
@@ -87,30 +89,41 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         chain: null,
         accessToken: null,
         refreshToken: null,
-        error: null,
       });
     }
   },
 
-  setConnecting: () => {
-    set({ status: "connecting", error: null });
+  connectWallet: async (wallet) => {
+    set({ status: "connecting", connectError: null });
+
+    try {
+      const { address } = await wallet.connect();
+      const { nonce, message } = await fetchNonce(address, wallet.chain);
+      const signature = await wallet.sign(address, message);
+      const { accessToken, refreshToken, user } = await verifySignature(
+        nonce,
+        signature,
+      );
+
+      get().setSession({
+        address: user.walletAddress,
+        chain: user.chain,
+        accessToken,
+        refreshToken,
+      });
+      return true;
+    } catch (error) {
+      set({
+        status: "disconnected",
+        connectError: (error as Error).message || "Failed to connect wallet",
+      });
+      return false;
+    }
   },
 
   setSession: (session) => {
     writeStoredSession(session);
-    set({ status: "connected", ...session, error: null });
-  },
-
-  setError: (message) => {
-    writeStoredSession(null);
-    set({
-      status: "disconnected",
-      address: null,
-      chain: null,
-      accessToken: null,
-      refreshToken: null,
-      error: message,
-    });
+    set({ status: "connected", ...session, connectError: null });
   },
 
   disconnect: () => {
@@ -121,41 +134,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       chain: null,
       accessToken: null,
       refreshToken: null,
-      error: null,
+      connectError: null,
     });
   },
 }));
-
-export function useConnectWallet() {
-  const setConnecting = useAuthStore((s) => s.setConnecting);
-  const setSession = useAuthStore((s) => s.setSession);
-  const setError = useAuthStore((s) => s.setError);
-
-  return useMutation({
-    mutationFn: async (wallet: WalletProviderDetail) => {
-      const { address } = await wallet.connect();
-      const { nonce, message } = await fetchNonce(address, wallet.chain);
-      const signature = await wallet.sign(address, message);
-      const { accessToken, refreshToken, user } = await verifySignature(
-        nonce,
-        signature,
-      );
-
-      return {
-        address: user.walletAddress,
-        chain: user.chain,
-        accessToken,
-        refreshToken,
-      };
-    },
-    onMutate: () => {
-      setConnecting();
-    },
-    onSuccess: (session) => {
-      setSession(session);
-    },
-    onError: (error: Error) => {
-      setError(error.message || "Failed to connect wallet");
-    },
-  });
-}

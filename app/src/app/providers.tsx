@@ -1,20 +1,12 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 import Image from "next/image";
 import { useAuthStore } from "@/store/auth-store";
+import { queryClient } from "@/lib/query-client";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: { retry: 1, staleTime: 30_000 },
-        },
-      }),
-  );
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthGate>{children}</AuthGate>
@@ -24,11 +16,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const status = useAuthStore((s) => s.status);
-  const hydrate = useAuthStore((s) => s.hydrate);
+  const checkAuth = useAuthStore((s) => s.checkAuth);
 
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
+    checkAuth();
+  }, [checkAuth]);
 
   if (status === "restoring") return <AuthLoader />;
 
