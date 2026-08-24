@@ -1,21 +1,19 @@
 import { Settings } from "lucide-react";
 import { Card, CardHeading } from "@/components/ui/Card";
-import type { ContractDetails } from "@/lib/analyzer-data";
+import { truncateAddress } from "@/helpers/address";
+import type { ApiProject } from "@/api/projects";
 
-export function ContractDetailsCard({ details }: { details: ContractDetails }) {
+export function ProjectDetailsCard({ project }: { project: ApiProject }) {
   const rows: [string, string][] = [
-    ["Contract Name", details.contractName],
-    ["Language", details.language],
-    ["Chain", details.chain],
-    ["License", details.license],
-    ["Optimization", details.optimization],
-    ["EVM Version", details.evmVersion],
+    ["Project Name", project.name],
+    ["Owner", truncateAddress(project.ownerAddress)],
+    ["Created", new Date(project.createdAt).toLocaleDateString()],
   ];
 
   return (
     <Card>
       <CardHeading icon={Settings} size="md">
-        Contract Details
+        Project Details
       </CardHeading>
       <div className="flex flex-col gap-3">
         {rows.map(([label, value]) => (
