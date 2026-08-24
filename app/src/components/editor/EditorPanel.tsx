@@ -5,25 +5,11 @@ import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { FileTabs } from "@/components/editor/FileTabs";
 import { CodeEditor } from "@/components/editor/CodeEditor";
 import { EditorFooter } from "@/components/editor/EditorFooter";
-import { ProjectGate } from "@/components/editor/ProjectGate";
 import { clampPanelWidth, useEditorStore } from "@/store/editor-store";
-import { useProjectStore } from "@/store/project-store";
-import { useAuthStore } from "@/store/auth-store";
-import { useProjects } from "@/api/projects";
 
 export function EditorPanel() {
   const sectionRef = useRef<HTMLElement>(null);
   const { panelWidth: width, setPanelWidth } = useEditorStore();
-  const authStatus = useAuthStore((s) => s.status);
-  const activeProjectId = useProjectStore((s) => s.activeProjectId);
-  const restoreProjects = useProjectStore((s) => s.restore);
-  const { data: projects } = useProjects();
-  const hasActiveProject =
-    authStatus === "connected" && !!projects?.some((p) => p.id === activeProjectId);
-
-  useEffect(() => {
-    restoreProjects();
-  }, [restoreProjects]);
 
   const dragOrigin = useRef<{ x: number; width: number } | null>(null);
   const pendingWidth = useRef(width);
@@ -92,18 +78,12 @@ export function EditorPanel() {
       style={{ width }}
       className="relative flex min-h-0 shrink-0 flex-col border-r border-border"
     >
-      {hasActiveProject ? (
-        <>
-          <EditorToolbar />
-          <FileTabs />
-          <div className="min-h-0 flex-1">
-            <CodeEditor />
-          </div>
-          <EditorFooter />
-        </>
-      ) : (
-        <ProjectGate />
-      )}
+      <EditorToolbar />
+      <FileTabs />
+      <div className="min-h-0 flex-1">
+        <CodeEditor />
+      </div>
+      <EditorFooter />
       <div
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
