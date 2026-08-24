@@ -9,23 +9,29 @@ export function EditorFooter() {
   return (
     <div className="flex shrink-0 flex-col gap-4 border-t border-border px-4 pb-4 pt-4.25">
       <div className="flex items-center justify-between text-xs text-muted">
-        <div className="flex items-center gap-4">
-          <span>{status.solidityVersion}</span>
-          <span className="flex items-center gap-1 text-success">
-            <CheckCircle2 className="size-3" />
-            Compiled Successfully
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1">
-            <Fuel className="size-3" />
-            {status.gas}
-          </span>
-          <span className="flex items-center gap-1">
-            <Clock className="size-3" />
-            {status.time}
-          </span>
-        </div>
+        {status.ok ? (
+          <>
+            <div className="flex items-center gap-4">
+              <span>{status.solidityVersion}</span>
+              <span className="flex items-center gap-1 text-success">
+                <CheckCircle2 className="size-3" />
+                Compiled Successfully
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1">
+                <Fuel className="size-3" />
+                {status.gas}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="size-3" />
+                {status.time}
+              </span>
+            </div>
+          </>
+        ) : (
+          <span>Not compiled yet</span>
+        )}
       </div>
       <div className="flex items-start gap-2">
         <Button variant="primary" className="flex-1">

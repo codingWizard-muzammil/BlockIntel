@@ -10,11 +10,10 @@ import { clampPanelWidth, useEditorStore } from "@/store/editor-store";
 import { useProjectStore } from "@/store/project-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useProjects } from "@/api/projects";
-import type { ContractAnalysis } from "@/lib/analyzer-data";
 
-export function EditorPanel({ analysis }: { analysis: ContractAnalysis }) {
+export function EditorPanel() {
   const sectionRef = useRef<HTMLElement>(null);
-  const { panelWidth: width, setPanelWidth, loadAnalysis } = useEditorStore();
+  const { panelWidth: width, setPanelWidth } = useEditorStore();
   const authStatus = useAuthStore((s) => s.status);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const restoreProjects = useProjectStore((s) => s.restore);
@@ -25,10 +24,6 @@ export function EditorPanel({ analysis }: { analysis: ContractAnalysis }) {
   useEffect(() => {
     restoreProjects();
   }, [restoreProjects]);
-
-  useEffect(() => {
-    loadAnalysis(analysis);
-  }, [analysis, loadAnalysis]);
 
   const dragOrigin = useRef<{ x: number; width: number } | null>(null);
   const pendingWidth = useRef(width);

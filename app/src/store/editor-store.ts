@@ -1,7 +1,15 @@
 import { create } from "zustand";
-import type { ContractAnalysis, extensions } from "@/lib/analyzer-data";
 import { formatSolidity } from "@/lib/format-solidity";
 import { ValueOf } from "next/dist/shared/lib/constants";
+
+export type extensions = "sol" | "vyper" | "rs" | "move" | "";
+
+type CompileStatus = {
+  solidityVersion: string;
+  ok: boolean;
+  gas: string;
+  time: string;
+};
 
 // Chains with a running node under chains/ — keep in sync with that folder.
 export const CHAINS = [
@@ -126,9 +134,8 @@ type EditorState = {
   autoSync: boolean;
   panelWidth: number;
   source: string;
-  compileStatus: ContractAnalysis["compileStatus"];
+  compileStatus: CompileStatus;
 
-  loadAnalysis: (analysis: ContractAnalysis) => void;
   addFile: () => void;
   setActiveFile: (id: string) => void;
   closeFile: (id: string) => void;
@@ -143,38 +150,26 @@ type EditorState = {
 };
 
 const initialFileId = createFileId();
+const initialExtension = defaultExtension(LANGUAGES[0]);
+const initialFileName = `Untitled1.${initialExtension}`;
 
 export const useEditorStore = create<EditorState>((set) => ({
-  files: [{ id: initialFileId, fileName: "", source: "", extension: "" }],
+  files: [
+    {
+      id: initialFileId,
+      fileName: initialFileName,
+      source: "",
+      extension: initialExtension,
+    },
+  ],
   activeFileId: initialFileId,
-  fileName: "",
+  fileName: initialFileName,
   language: LANGUAGES[0],
   chain: CHAINS[0].name,
   autoSync: true,
   panelWidth: getDefaultWidth(),
   source: "",
   compileStatus: { solidityVersion: "", ok: false, gas: "", time: "" },
-
-  loadAnalysis: (analysis) =>
-    set(() => {
-      const id = createFileId();
-      return {
-        files: [
-          {
-            id,
-            fileName: analysis.fileName,
-            source: analysis.sourceCode,
-            extension: analysis.extension,
-          },
-        ],
-        activeFileId: id,
-        fileName: analysis.fileName,
-        language: analysis.language,
-        chain: analysis.chain,
-        source: analysis.sourceCode,
-        compileStatus: analysis.compileStatus,
-      };
-    }),
 
   addFile: () =>
     set((state) => {
