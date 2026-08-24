@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "./client";
 import { useAuthStore } from "@/store/auth-store";
 import type { WalletProviderDetail } from "@/lib/wallet";
-import { NonceResponse, VerifyResponse } from "@/types/auth";
+import { MeResponse, NonceResponse, VerifyResponse } from "@/types/auth";
 
 export async function fetchNonce(address: string, chain: string) {
   const { data } = await apiClient.get<NonceResponse>("/auth/nonce", {
@@ -18,6 +18,11 @@ export async function verifySignature(nonce: string, signature: string) {
     nonce,
     signature,
   });
+  return data;
+}
+
+export async function fetchMe() {
+  const { data } = await apiClient.get<MeResponse>("/auth/me");
   return data;
 }
 

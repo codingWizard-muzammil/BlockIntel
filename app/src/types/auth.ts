@@ -6,3 +6,7 @@ export type VerifyResponse = {
   refreshToken: string;
   user: { walletAddress: string; chain: string };
 };
+
+export type MeResponse = {
+  user: { walletAddress: string; chain: string };
+};
