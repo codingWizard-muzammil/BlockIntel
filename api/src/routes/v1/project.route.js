@@ -6,6 +6,9 @@ const auth = require("../../middleware/auth.middleware");
 
 router.route("/").get(auth, projectController.list);
 router.route("/").post(auth, validate(create, "body"), projectController.create);
-router.route("/:id").delete(auth, validate(remove, "params"), projectController.remove);
+router
+  .route("/:id")
+  .get(auth, validate(remove, "params"), projectController.getOne)
+  .delete(auth, validate(remove, "params"), projectController.remove);
 
 module.exports = router;

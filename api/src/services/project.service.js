@@ -25,6 +25,18 @@ const listProjects = async ({ ownerAddress }) => {
   return { status: 200, json: { projects } };
 };
 
+const getProject = async ({ id, ownerAddress }) => {
+  const project = await projectModel.findOne({ id });
+
+  if (!project || project.ownerAddress !== ownerAddress) {
+    return { status: 404, json: { message: "Project not found" } };
+  }
+
+  project.contracts = project.contracts ?? [];
+
+  return { status: 200, json: { project } };
+};
+
 const deleteProject = async ({ id, ownerAddress }) => {
   const { count } = await projectModel.removeMany({ id, ownerAddress });
 
@@ -35,4 +47,4 @@ const deleteProject = async ({ id, ownerAddress }) => {
   return { status: 200, json: { message: "Project deleted" } };
 };
 
-module.exports = { createProject, listProjects, deleteProject };
+module.exports = { createProject, listProjects, getProject, deleteProject };
