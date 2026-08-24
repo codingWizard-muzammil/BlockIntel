@@ -15,4 +15,12 @@ const verifyNonce = async (req, res) => {
   res.status(status).json(json);
 };
 
-module.exports = { nonce, verifyNonce };
+const me = async (req, res) => {
+  const { address } = req.user;
+
+  const { json, status } = await auth.getMe({ address });
+
+  res.status(status).json(json);
+};
+
+module.exports = { nonce, verifyNonce, me };

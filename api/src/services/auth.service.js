@@ -57,4 +57,15 @@ const verifyNonce = async ({ nonce, signature }) => {
   };
 };
 
-module.exports = { createNonce, verifyNonce };
+const getMe = async ({ address }) => {
+  const userData = await userModel.findOne({ walletAddress: address });
+
+  if (!userData) return { json: { message: "User not found" }, status: 404 };
+
+  return {
+    status: 200,
+    json: { user: { walletAddress: userData.walletAddress, chain: userData.chain } },
+  };
+};
+
+module.exports = { createNonce, verifyNonce, getMe };
