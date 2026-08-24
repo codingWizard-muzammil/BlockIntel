@@ -22,7 +22,7 @@ export function Sidebar() {
 
   const topItems = [
     {
-      href: activeProjectId ? `/contract/${activeProjectId}/summary` : "/projects",
+      href: activeProjectId ? `/contract/${activeProjectId}/summary` : "/contract",
       icon: Code2,
       label: "Analyzer",
       match: "/contract",
