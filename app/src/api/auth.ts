@@ -1,9 +1,4 @@
-"use client";
-
-import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "./client";
-import { useAuthStore } from "@/store/auth-store";
-import type { WalletProviderDetail } from "@/lib/wallet";
 import { MeResponse, NonceResponse, VerifyResponse } from "@/types/auth";
 
 export async function fetchNonce(address: string, chain: string) {
@@ -24,36 +19,4 @@ export async function verifySignature(nonce: string, signature: string) {
 export async function fetchMe() {
   const { data } = await apiClient.get<MeResponse>("/auth/me");
   return data;
-}
-
-export function useConnectWallet() {
-  const { setConnecting, setSession, setError } = useAuthStore();
-
-  return useMutation({
-    mutationFn: async (wallet: WalletProviderDetail) => {
-      const { address } = await wallet.connect();
-      const { nonce, message } = await fetchNonce(address, wallet.chain);
-      const signature = await wallet.sign(address, message);
-      const { accessToken, refreshToken, user } = await verifySignature(
-        nonce,
-        signature,
-      );
-
-      return {
-        address: user.walletAddress,
-        chain: user.chain,
-        accessToken,
-        refreshToken,
-      };
-    },
-    onMutate: () => {
-      setConnecting();
-    },
-    onSuccess: (session) => {
-      setSession(session);
-    },
-    onError: (error: Error) => {
-      setError(error.message || "Failed to connect wallet");
-    },
-  });
 }

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Wallet, X } from "lucide-react";
-import { useAuthStore } from "@/store/auth-store";
-import { useConnectWallet } from "@/api/auth";
+import { useAuthStore, useConnectWallet } from "@/store/auth-store";
 import {
   CHAIN_LABELS,
   discoverWalletProviders,

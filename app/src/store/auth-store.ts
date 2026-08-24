@@ -1,7 +1,9 @@
 "use client";
 
 import { create } from "zustand";
-import { fetchMe } from "@/api/auth";
+import { useMutation } from "@tanstack/react-query";
+import { fetchMe, fetchNonce, verifySignature } from "@/api/auth";
+import type { WalletProviderDetail } from "@/lib/wallet";
 
 const STORAGE_KEY = "blockintel-auth";
 
@@ -123,3 +125,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 }));
+
+export function useConnectWallet() {
+  const setConnecting = useAuthStore((s) => s.setConnecting);
+  const setSession = useAuthStore((s) => s.setSession);
+  const setError = useAuthStore((s) => s.setError);
+
+  return useMutation({
+    mutationFn: async (wallet: WalletProviderDetail) => {
+      const { address } = await wallet.connect();
+      const { nonce, message } = await fetchNonce(address, wallet.chain);
+      const signature = await wallet.sign(address, message);
+      const { accessToken, refreshToken, user } = await verifySignature(
+        nonce,
+        signature,
+      );
+
+      return {
+        address: user.walletAddress,
+        chain: user.chain,
+        accessToken,
+        refreshToken,
+      };
+    },
+    onMutate: () => {
+      setConnecting();
+    },
+    onSuccess: (session) => {
+      setSession(session);
+    },
+    onError: (error: Error) => {
+      setError(error.message || "Failed to connect wallet");
+    },
+  });
+}
