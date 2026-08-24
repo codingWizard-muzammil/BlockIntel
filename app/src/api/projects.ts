@@ -17,6 +17,11 @@ export async function fetchProjects() {
   return data.projects;
 }
 
+export async function fetchProject(id: string) {
+  const { data } = await apiClient.get<{ project: ApiProject }>(`/projects/${id}`);
+  return data.project;
+}
+
 export async function createProjectRequest(name: string) {
   const { data } = await apiClient.post<{ project: ApiProject }>("/projects", { name });
   return data.project;
@@ -34,6 +39,16 @@ export function useProjects() {
     queryKey: ["projects"],
     queryFn: fetchProjects,
     enabled: status === "connected",
+  });
+}
+
+export function useProject(id: string | null) {
+  const status = useAuthStore((s) => s.status);
+
+  return useQuery({
+    queryKey: ["projects", id],
+    queryFn: () => fetchProject(id as string),
+    enabled: status === "connected" && !!id,
   });
 }
 
