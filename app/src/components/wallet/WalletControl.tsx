@@ -11,7 +11,7 @@ interface WalletOptions {
   fn: () => void;
 }
 function WalletControl() {
-  const { status, address, restore, disconnect } = useAuthStore();
+  const { status, address, disconnect } = useAuthStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -44,10 +44,6 @@ function WalletControl() {
         document.removeEventListener("pointerdown", handlePointerDown);
     }, [ref, onOutside]);
   }
-
-  useEffect(() => {
-    restore();
-  }, [restore]);
 
   if (status === "connected" && address) {
     return (

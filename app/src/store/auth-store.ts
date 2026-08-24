@@ -1,10 +1,11 @@
 "use client";
 
 import { create } from "zustand";
+import { fetchMe } from "@/api/auth";
 
 const STORAGE_KEY = "blockintel-auth";
 
-type AuthStatus = "disconnected" | "connecting" | "connected";
+type AuthStatus = "restoring" | "disconnected" | "connecting" | "connected";
 
 type StoredSession = {
   address: string;
@@ -20,7 +21,7 @@ type AuthState = {
   accessToken: string | null;
   refreshToken: string | null;
   error: string | null;
-  restore: () => void;
+  hydrate: () => Promise<void>;
   setConnecting: () => void;
   setSession: (session: StoredSession) => void;
   setError: (message: string) => void;
@@ -45,17 +46,48 @@ function writeStoredSession(session: StoredSession | null) {
   }
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  status: "disconnected",
+export const useAuthStore = create<AuthState>((set, get) => ({
+  status: "restoring",
   address: null,
   chain: null,
   accessToken: null,
   refreshToken: null,
   error: null,
 
-  restore: () => {
+  hydrate: async () => {
+    if (get().status !== "restoring") return;
+
     const session = readStoredSession();
-    if (session) set({ status: "connected", ...session, error: null });
+    if (!session) {
+      set({ status: "disconnected" });
+      return;
+    }
+
+    // Set the token first so the request interceptor picks it up, then
+    // confirm the session against the backend before trusting it.
+    set({ ...session, error: null });
+
+    try {
+      const { user } = await fetchMe();
+      const confirmed: StoredSession = {
+        address: user.walletAddress,
+        chain: user.chain,
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+      };
+      writeStoredSession(confirmed);
+      set({ status: "connected", ...confirmed, error: null });
+    } catch {
+      writeStoredSession(null);
+      set({
+        status: "disconnected",
+        address: null,
+        chain: null,
+        accessToken: null,
+        refreshToken: null,
+        error: null,
+      });
+    }
   },
 
   setConnecting: () => {
