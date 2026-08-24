@@ -1,17 +1,19 @@
 "use client";
 
 import { create } from "zustand";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryClient } from "@/lib/query-client";
 import { useAuthStore } from "@/store/auth-store";
 import {
   createProjectRequest,
   deleteProjectRequest,
-  fetchProject,
-  fetchProjects,
+  fetchProject as fetchProjectRequest,
+  fetchProjects as fetchProjectsRequest,
   type ApiProject,
 } from "@/api/projects";
 
 export type { ApiProject };
+
+type RequestStatus = "idle" | "loading" | "success" | "error";
 
 const STORAGE_KEY = "blockintel-active-project";
 
@@ -19,11 +21,25 @@ type ProjectState = {
   activeProjectId: string | null;
   hydrated: boolean;
   projects: ApiProject[];
+
+  projectsStatus: RequestStatus;
+  projectsError: string | null;
+  projectStatus: RequestStatus;
+  projectError: string | null;
+  createStatus: RequestStatus;
+  createError: string | null;
+  deleteStatus: RequestStatus;
+  deleteError: string | null;
+
   restore: () => void;
   setActiveProjectId: (id: string | null) => void;
-  setProjects: (projects: ApiProject[]) => void;
   upsertProject: (project: ApiProject) => void;
   removeProject: (id: string) => void;
+
+  fetchProjects: () => Promise<void>;
+  fetchProject: (id: string) => Promise<ApiProject | null>;
+  createProject: (name: string) => Promise<ApiProject | null>;
+  deleteProject: (id: string) => Promise<boolean>;
 };
 
 function readStored(): string | null {
@@ -48,6 +64,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   hydrated: false,
   projects: [],
 
+  projectsStatus: "idle",
+  projectsError: null,
+  projectStatus: "idle",
+  projectError: null,
+  createStatus: "idle",
+  createError: null,
+  deleteStatus: "idle",
+  deleteError: null,
+
   restore: () => {
     if (get().hydrated) return;
     set({ activeProjectId: readStored(), hydrated: true });
@@ -58,8 +83,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ activeProjectId: id });
   },
 
-  setProjects: (projects) => set({ projects }),
-
   upsertProject: (project) =>
     set((state) => ({
       projects: [project, ...state.projects.filter((p) => p.id !== project.id)],
@@ -67,63 +90,75 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   removeProject: (id) =>
     set((state) => ({ projects: state.projects.filter((p) => p.id !== id) })),
+
+  fetchProjects: async () => {
+    if (useAuthStore.getState().status !== "connected") return;
+    set({ projectsStatus: "loading", projectsError: null });
+    try {
+      const projects = await queryClient.fetchQuery({
+        queryKey: ["projects"],
+        queryFn: fetchProjectsRequest,
+      });
+      set({ projects, projectsStatus: "success" });
+    } catch (error) {
+      set({ projectsStatus: "error", projectsError: (error as Error).message });
+    }
+  },
+
+  fetchProject: async (id) => {
+    set({ projectStatus: "loading", projectError: null });
+    try {
+      const project = await queryClient.fetchQuery({
+        queryKey: ["projects", id],
+        queryFn: () => fetchProjectRequest(id),
+      });
+      get().upsertProject(project);
+      set({ projectStatus: "success" });
+      return project;
+    } catch (error) {
+      set({ projectStatus: "error", projectError: (error as Error).message });
+      return null;
+    }
+  },
+
+  createProject: async (name) => {
+    set({ createStatus: "loading", createError: null });
+    try {
+      const project = await createProjectRequest(name);
+      get().upsertProject(project);
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      set({ createStatus: "success" });
+      return project;
+    } catch (error) {
+      set({ createStatus: "error", createError: (error as Error).message });
+      return null;
+    }
+  },
+
+  deleteProject: async (id) => {
+    set({ deleteStatus: "loading", deleteError: null });
+    try {
+      await deleteProjectRequest(id);
+      get().removeProject(id);
+      if (get().activeProjectId === id) get().setActiveProjectId(null);
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      set({ deleteStatus: "success" });
+      return true;
+    } catch (error) {
+      set({ deleteStatus: "error", deleteError: (error as Error).message });
+      return false;
+    }
+  },
 }));
 
-export function useProjects() {
-  const status = useAuthStore((s) => s.status);
-  const setProjects = useProjectStore((s) => s.setProjects);
+// Keep the project list in sync with auth: load it as soon as a wallet
+// session is confirmed, and drop it when the session ends.
+useAuthStore.subscribe((state, prevState) => {
+  if (state.status === prevState.status) return;
 
-  return useQuery({
-    queryKey: ["projects"],
-    queryFn: async () => {
-      const projects = await fetchProjects();
-      setProjects(projects);
-      return projects;
-    },
-    enabled: status === "connected",
-  });
-}
-
-export function useProject(id: string | null) {
-  const status = useAuthStore((s) => s.status);
-  const upsertProject = useProjectStore((s) => s.upsertProject);
-
-  return useQuery({
-    queryKey: ["projects", id],
-    queryFn: async () => {
-      const project = await fetchProject(id as string);
-      upsertProject(project);
-      return project;
-    },
-    enabled: status === "connected" && !!id,
-  });
-}
-
-export function useCreateProject() {
-  const queryClient = useQueryClient();
-  const upsertProject = useProjectStore((s) => s.upsertProject);
-
-  return useMutation({
-    mutationFn: createProjectRequest,
-    onSuccess: (project) => {
-      upsertProject(project);
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-    },
-  });
-}
-
-export function useDeleteProject() {
-  const queryClient = useQueryClient();
-  const activeProjectId = useProjectStore((s) => s.activeProjectId);
-  const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
-  const removeProject = useProjectStore((s) => s.removeProject);
-
-  return useMutation({
-    mutationFn: deleteProjectRequest,
-    onSuccess: (id) => {
-      removeProject(id);
-      if (activeProjectId === id) setActiveProjectId(null);
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-    },
-  });
-}
+  if (state.status === "connected") {
+    useProjectStore.getState().fetchProjects();
+  } else if (prevState.status === "connected") {
+    useProjectStore.setState({ projects: [], projectsStatus: "idle" });
+  }
+});

@@ -1,10 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { FolderX, Loader2, Wallet } from "lucide-react";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { useAuthStore } from "@/store/auth-store";
-import { useProject, type ApiProject } from "@/store/project-store";
+import { useProjectStore, type ApiProject } from "@/store/project-store";
 
 export function ProjectStateGate({
   projectId,
@@ -14,7 +14,15 @@ export function ProjectStateGate({
   children: (project: ApiProject) => ReactNode;
 }) {
   const authStatus = useAuthStore((s) => s.status);
-  const { data: project, isLoading, isError } = useProject(projectId);
+  const fetchProject = useProjectStore((s) => s.fetchProject);
+  const project = useProjectStore((s) =>
+    s.projects.find((p) => p.id === projectId),
+  );
+  const projectStatus = useProjectStore((s) => s.projectStatus);
+
+  useEffect(() => {
+    if (authStatus === "connected") fetchProject(projectId);
+  }, [authStatus, projectId, fetchProject]);
 
   if (authStatus !== "connected") {
     return (
@@ -26,7 +34,7 @@ export function ProjectStateGate({
     );
   }
 
-  if (isLoading) {
+  if (!project && projectStatus === "loading") {
     return (
       <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted">
         <Loader2 className="size-4 animate-spin" />
@@ -35,7 +43,7 @@ export function ProjectStateGate({
     );
   }
 
-  if (isError || !project) {
+  if (!project) {
     return (
       <ComingSoon
         icon={FolderX}

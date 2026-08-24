@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { useProjectStore, useCreateProject } from "@/store/project-store";
+import { useProjectStore } from "@/store/project-store";
 
 export function CreateProjectModal({
   open,
@@ -15,7 +15,9 @@ export function CreateProjectModal({
 }) {
   const router = useRouter();
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
-  const createProject = useCreateProject();
+  const createProject = useProjectStore((s) => s.createProject);
+  const createStatus = useProjectStore((s) => s.createStatus);
+  const createError = useProjectStore((s) => s.createError);
   const [name, setName] = useState("");
 
   function handleClose() {
@@ -37,18 +39,18 @@ export function CreateProjectModal({
 
   if (!open) return null;
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    createProject.mutate(trimmed, {
-      onSuccess: (project) => {
-        setActiveProjectId(project.id);
-        handleClose();
-        router.push(`/contract/${project.id}/summary`);
-      },
-    });
+    const project = await createProject(trimmed);
+    if (!project) return;
+    setActiveProjectId(project.id);
+    handleClose();
+    router.push(`/contract/${project.id}/summary`);
   }
+
+  const isPending = createStatus === "loading";
 
   return (
     <div
@@ -76,19 +78,15 @@ export function CreateProjectModal({
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Project name"
-            disabled={createProject.isPending}
+            disabled={isPending}
             className="rounded-md border border-border bg-input px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent disabled:opacity-60"
           />
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={!name.trim() || createProject.isPending}
-          >
-            {createProject.isPending && <Loader2 className="size-3.5 animate-spin" />}
+          <Button type="submit" variant="primary" disabled={!name.trim() || isPending}>
+            {isPending && <Loader2 className="size-3.5 animate-spin" />}
             Create project
           </Button>
-          {createProject.isError && (
-            <p className="text-xs text-danger">{(createProject.error as Error).message}</p>
+          {createStatus === "error" && (
+            <p className="text-xs text-danger">{createError}</p>
           )}
         </form>
       </div>

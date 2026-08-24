@@ -3,12 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Check, FolderKanban, Plus } from "lucide-react";
-import {
-  useProjectStore,
-  useDeleteProject,
-  useProjects,
-  type ApiProject,
-} from "@/store/project-store";
+import { useProjectStore, type ApiProject } from "@/store/project-store";
 import { CreateProjectModal } from "@/components/editor/CreateProjectModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import Dropdown from "@/components/ui/Dropdown";
@@ -16,19 +11,20 @@ import Dropdown from "@/components/ui/Dropdown";
 export function ProjectSwitcher() {
   const router = useRouter();
   const { id: activeProjectId } = useParams<{ id: string }>();
-  const { data: projects = [] } = useProjects();
+  const projects = useProjectStore((s) => s.projects);
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const activeProject = projects.find((p) => p.id === activeProjectId);
-  const deleteProject = useDeleteProject();
+  const deleteProject = useProjectStore((s) => s.deleteProject);
+  const deleteStatus = useProjectStore((s) => s.deleteStatus);
+  const deleteError = useProjectStore((s) => s.deleteError);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<ApiProject | null>(null);
 
-  function handleConfirmDelete() {
+  async function handleConfirmDelete() {
     if (!pendingDelete) return;
-    deleteProject.mutate(pendingDelete.id, {
-      onSuccess: () => setPendingDelete(null),
-    });
+    const ok = await deleteProject(pendingDelete.id);
+    if (ok) setPendingDelete(null);
   }
 
   return (
@@ -78,10 +74,8 @@ export function ProjectSwitcher() {
         title="Delete project"
         description={`This will permanently delete "${pendingDelete?.name}" and all of its contracts. This can't be undone.`}
         confirmLabel="Delete"
-        isPending={deleteProject.isPending}
-        errorMessage={
-          deleteProject.isError ? (deleteProject.error as Error).message : null
-        }
+        isPending={deleteStatus === "loading"}
+        errorMessage={deleteStatus === "error" ? deleteError : null}
         onConfirm={handleConfirmDelete}
         onClose={() => setPendingDelete(null)}
       />

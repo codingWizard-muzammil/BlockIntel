@@ -7,27 +7,24 @@ import { ComingSoon } from "@/components/ui/ComingSoon";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CreateProjectModal } from "@/components/editor/CreateProjectModal";
 import { useAuthStore } from "@/store/auth-store";
-import {
-  useProjectStore,
-  useDeleteProject,
-  useProjects,
-  type ApiProject,
-} from "@/store/project-store";
+import { useProjectStore, type ApiProject } from "@/store/project-store";
 import { Button } from "@/components/ui/Button";
 
 export default function HistoryPage() {
   const authStatus = useAuthStore((s) => s.status);
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
-  const { data: projects, isLoading, isError } = useProjects();
-  const deleteProject = useDeleteProject();
+  const projects = useProjectStore((s) => s.projects);
+  const projectsStatus = useProjectStore((s) => s.projectsStatus);
+  const deleteProject = useProjectStore((s) => s.deleteProject);
+  const deleteStatus = useProjectStore((s) => s.deleteStatus);
+  const deleteError = useProjectStore((s) => s.deleteError);
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<ApiProject | null>(null);
 
-  function handleConfirmDelete() {
+  async function handleConfirmDelete() {
     if (!pendingDelete) return;
-    deleteProject.mutate(pendingDelete.id, {
-      onSuccess: () => setPendingDelete(null),
-    });
+    const ok = await deleteProject(pendingDelete.id);
+    if (ok) setPendingDelete(null);
   }
 
   if (authStatus !== "connected") {
@@ -40,7 +37,7 @@ export default function HistoryPage() {
     );
   }
 
-  if (isLoading) {
+  if (projectsStatus === "loading" && projects.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted">
         <Loader2 className="size-4 animate-spin" />
@@ -49,7 +46,7 @@ export default function HistoryPage() {
     );
   }
 
-  if (isError) {
+  if (projectsStatus === "error" && projects.length === 0) {
     return (
       <ComingSoon
         icon={FolderKanban}
@@ -67,7 +64,7 @@ export default function HistoryPage() {
           <Plus className="size-4" /> Add Project
         </Button>
       </div>
-      {projects && projects.length ? (
+      {projects.length ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
             <Link
@@ -118,10 +115,8 @@ export default function HistoryPage() {
         title="Delete project"
         description={`This will permanently delete "${pendingDelete?.name}" and all of its contracts. This can't be undone.`}
         confirmLabel="Delete"
-        isPending={deleteProject.isPending}
-        errorMessage={
-          deleteProject.isError ? (deleteProject.error as Error).message : null
-        }
+        isPending={deleteStatus === "loading"}
+        errorMessage={deleteStatus === "error" ? deleteError : null}
         onConfirm={handleConfirmDelete}
         onClose={() => setPendingDelete(null)}
       />

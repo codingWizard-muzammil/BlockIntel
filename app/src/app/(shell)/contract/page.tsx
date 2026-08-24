@@ -3,15 +3,15 @@ import { CreateProjectModal } from "@/components/editor/CreateProjectModal";
 import { Button } from "@/components/ui/Button";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import Dropdown from "@/components/ui/Dropdown";
-import { useProjects, useProjectStore } from "@/store/project-store";
+import { useProjectStore } from "@/store/project-store";
 import { Folder } from "lucide-react";
 import { redirect } from "next/navigation";
 import { useState } from "react";
 import { BiQuestionMark } from "react-icons/bi";
 
 const ContractIndexPage = () => {
-  const { data } = useProjects();
-  const { setActiveProjectId } = useProjectStore();
+  const data = useProjectStore((s) => s.projects);
+  const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const [projectModelOpen, setProjectModelOpen] = useState(false);
 
   const handleOnChange = (id: string) => {
