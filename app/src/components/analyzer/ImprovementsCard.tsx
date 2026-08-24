@@ -1,7 +1,7 @@
 import { ArrowRight, Lightbulb } from "lucide-react";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { SeverityBadge } from "@/components/ui/SeverityBadge";
-import type { Improvement } from "@/lib/analyzer-data";
+import type { Improvement } from "@/types/analysis";
 
 function ImprovementItem({ improvement }: { improvement: Improvement }) {
   return (
@@ -28,18 +28,24 @@ export function ImprovementsCard({ improvements }: { improvements: Improvement[]
   return (
     <Card>
       <CardHeading icon={Lightbulb}>Improvements</CardHeading>
-      <div className="flex flex-col gap-4">
-        {improvements.map((improvement) => (
-          <ImprovementItem key={improvement.title} improvement={improvement} />
-        ))}
-      </div>
-      <a
-        href="#"
-        className="mt-4 flex items-center gap-2 text-sm text-accent hover:underline"
-      >
-        View more suggestions
-        <ArrowRight className="size-3" />
-      </a>
+      {improvements.length ? (
+        <>
+          <div className="flex flex-col gap-4">
+            {improvements.map((improvement) => (
+              <ImprovementItem key={improvement.title} improvement={improvement} />
+            ))}
+          </div>
+          <a
+            href="#"
+            className="mt-4 flex items-center gap-2 text-sm text-accent hover:underline"
+          >
+            View more suggestions
+            <ArrowRight className="size-3" />
+          </a>
+        </>
+      ) : (
+        <p className="text-sm text-muted">No improvement suggestions yet.</p>
+      )}
     </Card>
   );
 }

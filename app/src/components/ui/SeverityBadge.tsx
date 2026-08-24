@@ -1,4 +1,4 @@
-import type { Severity } from "@/lib/analyzer-data";
+import type { Severity } from "@/types/analysis";
 
 const styles: Record<Severity, string> = {
   high: "text-danger border-danger/30",
