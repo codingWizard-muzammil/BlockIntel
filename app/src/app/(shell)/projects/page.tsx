@@ -7,8 +7,9 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CreateProjectModal } from "@/components/editor/CreateProjectModal";
 import { ProjectCard } from "@/components/editor/ProjectCard";
 import { useAuthStore } from "@/store/auth-store";
-import { useProjectStore, type ApiProject } from "@/store/project-store";
+import { useProjectStore } from "@/store/project-store";
 import { Button } from "@/components/ui/Button";
+import { useDeleteProjectFlow } from "@/hooks/useDeleteProjectFlow";
 
 export default function HistoryPage() {
   const authStatus = useAuthStore((s) => s.status);
@@ -16,21 +17,12 @@ export default function HistoryPage() {
   const projects = useProjectStore((s) => s.projects);
   const projectsStatus = useProjectStore((s) => s.projectsStatus);
   const fetchProjects = useProjectStore((s) => s.fetchProjects);
-  const deleteProject = useProjectStore((s) => s.deleteProject);
-  const deleteStatus = useProjectStore((s) => s.deleteStatus);
-  const deleteError = useProjectStore((s) => s.deleteError);
   const [modalOpen, setModalOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<ApiProject | null>(null);
+  const { requestDelete, dialogProps } = useDeleteProjectFlow();
 
   useEffect(() => {
     if (authStatus === "connected") fetchProjects();
   }, [authStatus, fetchProjects]);
-
-  async function handleConfirmDelete() {
-    if (!pendingDelete) return;
-    const ok = await deleteProject(pendingDelete.id);
-    if (ok) setPendingDelete(null);
-  }
 
   if (authStatus !== "connected") {
     return (
@@ -76,7 +68,7 @@ export default function HistoryPage() {
               key={project.id}
               project={project}
               onOpen={() => setActiveProjectId(project.id)}
-              onDelete={() => setPendingDelete(project)}
+              onDelete={() => requestDelete(project)}
             />
           ))}
         </div>
@@ -91,16 +83,7 @@ export default function HistoryPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
       />
-      <ConfirmDialog
-        open={!!pendingDelete}
-        title="Delete project"
-        description={`This will permanently delete "${pendingDelete?.name}" and all of its contracts. This can't be undone.`}
-        confirmLabel="Delete"
-        isPending={deleteStatus === "loading"}
-        errorMessage={deleteStatus === "error" ? deleteError : null}
-        onConfirm={handleConfirmDelete}
-        onClose={() => setPendingDelete(null)}
-      />
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }
