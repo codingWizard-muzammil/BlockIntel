@@ -1,19 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import {
-  Check,
-  ChevronDown,
-  Link2,
-  Link2Off,
-  SlidersHorizontal,
-  Settings2,
-} from "lucide-react";
-import { CHAIN_LANGUAGES, CHAINS, useEditorStore } from "@/store/editor-store";
+import { CHAINS, useEditorStore } from "@/store/editor-store";
 import { ChainIcon } from "@/components/editor/chain-icons";
 import { ProjectSwitcher } from "@/components/editor/ProjectSwitcher";
-import { useClickOutside } from "@/hooks/useClickOutside";
-import Dropdown from "../ui/Dropdown";
 
 function ChainBadge({
   chain,
@@ -36,89 +25,26 @@ function ChainBadge({
 }
 
 export function EditorToolbar() {
-  const {
-    language,
-    chain,
-    lockedChain,
-    autoSync,
-    setLanguage,
-    setChain,
-    toggleAutoSync,
-  } = useEditorStore();
+  const { chain, lockedChain } = useEditorStore();
 
-  const activeChain = CHAINS.find((c) => c.name === chain) ?? CHAINS[0];
+  const activeChainName = lockedChain ?? chain;
+  const activeChain =
+    CHAINS.find((c) => c.name === activeChainName) ?? CHAINS[0];
 
   return (
     <div className="flex h-14 shrink-0 items-center gap-4 border-b border-border px-4">
       <ProjectSwitcher />
 
-      <Dropdown
-        label="Language"
-        value={language}
-        options={CHAIN_LANGUAGES[chain]}
-        getKey={(lang) => lang}
-        onChange={setLanguage}
-        trigger={language}
-        renderOption={(lang, selected) => (
-          <>
-            <span className="flex-1">{lang}</span>
-            {selected && <Check className="size-3 shrink-0" />}
-          </>
-        )}
-      />
-
-      {lockedChain ? (
-        <span
-          title="This project's chain is fixed — create a new project to target a different chain"
-          className="relative flex items-center gap-2 rounded-md border border-border bg-input py-1.75 pl-3 pr-2.5 text-xs text-ink"
-        >
-          <span className="absolute -top-1.75 left-2.5 z-10 bg-canvas px-1 text-[10px] leading-none text-muted">
-            Chain
-          </span>
-          <ChainBadge chain={activeChain.name} />
-          {chain}
-        </span>
-      ) : (
-        <Dropdown
-          label="Chain"
-          value={chain}
-          options={CHAINS}
-          getKey={(c) => c.name}
-          onChange={(next) => setChain(next.name)}
-          trigger={
-            <>
-              <ChainBadge chain={activeChain.name} />
-              {chain}
-            </>
-          }
-          renderOption={(c, selected) => (
-            <>
-              <ChainBadge chain={c.name} selected={selected} />
-              <span className="flex-1">{c.name}</span>
-              {selected && <Check className="size-3 shrink-0" />}
-            </>
-          )}
-        />
-      )}
-
-      {/* <button
-        type="button"
-        onClick={toggleAutoSync}
-        aria-pressed={autoSync}
-        title="Auto-sync chain & language"
-        className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors ${
-          autoSync
-            ? "border-accent/40 bg-accent-soft text-accent"
-            : "border-border bg-input text-muted hover:text-ink"
-        }`}
+      <span
+        title="This project's chain is fixed — create a new project to target a different chain"
+        className="relative flex items-center gap-2 rounded-md border border-border bg-input py-1.75 pl-3 pr-2.5 text-xs text-ink"
       >
-        {autoSync ? (
-          <Link2 className="size-3" />
-        ) : (
-          <Link2Off className="size-3" />
-        )}
-        Auto-sync
-      </button> */}
+        <span className="absolute -top-1.75 left-2.5 z-10 bg-canvas px-1 text-[10px] leading-none text-muted">
+          Chain
+        </span>
+        <ChainBadge chain={activeChain.name} />
+        {activeChain.name}
+      </span>
     </div>
   );
 }

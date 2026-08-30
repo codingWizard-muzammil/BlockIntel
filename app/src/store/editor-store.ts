@@ -45,10 +45,6 @@ export const LANGUAGES = Array.from(
   new Set(Object.values(CHAIN_LANGUAGES).flat()),
 );
 
-export function chainsSupporting(language: string) {
-  return CHAINS.filter((c) => CHAIN_LANGUAGES[c.name].includes(language));
-}
-
 const MIN_PANEL_WIDTH = 380;
 const MAX_PANEL_WIDTH = 800;
 const DEFAULT_PANEL_WIDTH = 590;
@@ -89,6 +85,7 @@ export type EditorFile = {
   fileName: string;
   source: string;
   extension: extensions;
+  language: string;
 };
 
 function createFileId() {
@@ -119,6 +116,7 @@ function retargetFilesToLanguage(
     ...f,
     fileName: renameFileExtension(f.fileName, extension),
     extension,
+    language,
   }));
   const fileName =
     nextFiles.find((f) => f.id === activeFileId)?.fileName ?? fallbackFileName;
@@ -132,19 +130,16 @@ type EditorState = {
   language: string;
   chain: string;
   lockedChain: string | null;
-  autoSync: boolean;
   panelWidth: number;
   source: string;
   compileStatus: CompileStatus;
 
-  addFile: () => void;
+  addFile: () => string;
   setActiveFile: (id: string) => void;
   closeFile: (id: string) => void;
   setFileName: (fileName: string) => void;
-  setLanguage: (language: string) => void;
-  setChain: (chain: string) => void;
+  setFileLanguage: (id: string, language: string) => void;
   setLockedChain: (chain: string | null) => void;
-  toggleAutoSync: () => void;
   setPanelWidth: (width: number) => void;
   setSource: (source: string) => void;
   clearSource: () => void;
@@ -162,6 +157,7 @@ export const useEditorStore = create<EditorState>((set) => ({
       fileName: initialFileName,
       source: "",
       extension: initialExtension,
+      language: LANGUAGES[0],
     },
   ],
   activeFileId: initialFileId,
@@ -169,36 +165,46 @@ export const useEditorStore = create<EditorState>((set) => ({
   language: LANGUAGES[0],
   chain: CHAINS[0].name,
   lockedChain: null,
-  autoSync: true,
   panelWidth: getDefaultWidth(),
   source: "",
   compileStatus: { solidityVersion: "", ok: false, gas: "", time: "" },
 
-  addFile: () =>
+  addFile: () => {
+    const id = createFileId();
     set((state) => {
       const existingNames = new Set(state.files.map((f) => f.fileName));
-      const extension = defaultExtension(state.language);
+      const language =
+        state.files.find((f) => f.id === state.activeFileId)?.language ??
+        state.language;
+      const extension = defaultExtension(language);
       let index = state.files.length + 1;
       let fileName = `Untitled${index}.${extension}`;
       while (existingNames.has(fileName)) {
         index += 1;
         fileName = `Untitled${index}.${extension}`;
       }
-      const id = createFileId();
-      const file: EditorFile = { id, fileName, source: "", extension };
+      const file: EditorFile = { id, fileName, source: "", extension, language };
       return {
         files: [...state.files, file],
         activeFileId: id,
         fileName: file.fileName,
         source: file.source,
+        language,
       };
-    }),
+    });
+    return id;
+  },
 
   setActiveFile: (id) =>
     set((state) => {
       const file = state.files.find((f) => f.id === id);
       if (!file) return {};
-      return { activeFileId: id, fileName: file.fileName, source: file.source };
+      return {
+        activeFileId: id,
+        fileName: file.fileName,
+        source: file.source,
+        language: file.language,
+      };
     }),
 
   closeFile: (id) =>
@@ -212,6 +218,7 @@ export const useEditorStore = create<EditorState>((set) => ({
         activeFileId: nextActive.id,
         fileName: nextActive.fileName,
         source: nextActive.source,
+        language: nextActive.language,
       };
     }),
 
@@ -223,52 +230,31 @@ export const useEditorStore = create<EditorState>((set) => ({
       ),
     })),
 
-  setLanguage: (language) =>
+  // Each open file carries its own language — a chain whose toolchain
+  // supports more than one language (e.g. Ethereum: Solidity + Vyper) can
+  // have files in different languages open side by side.
+  setFileLanguage: (id, language) =>
     set((state) => {
-      // A project locks the editor to its chain — only languages that
-      // chain's toolchain supports can be selected (e.g. no writing .sol
-      // files inside a Solana project).
-      if (
-        state.lockedChain &&
-        !CHAIN_LANGUAGES[state.lockedChain].includes(language)
-      ) {
-        return {};
-      }
+      const supported = state.lockedChain
+        ? CHAIN_LANGUAGES[state.lockedChain]
+        : LANGUAGES;
+      if (!supported.includes(language)) return {};
 
-      const { files, fileName } = retargetFilesToLanguage(
-        state.files,
-        state.activeFileId,
-        state.fileName,
-        language,
+      const extension = defaultExtension(language);
+      const files = state.files.map((f) =>
+        f.id === id
+          ? {
+              ...f,
+              language,
+              extension,
+              fileName: renameFileExtension(f.fileName, extension),
+            }
+          : f,
       );
 
-      if (state.lockedChain) return { language, files, fileName };
-      if (!state.autoSync) return { language, files, fileName };
-      const supportedChains = chainsSupporting(language);
-      const chain = supportedChains.some((c) => c.name === state.chain)
-        ? state.chain
-        : supportedChains[0].name;
-      return { language, chain, files, fileName };
-    }),
-
-  setChain: (chain) =>
-    set((state) => {
-      // The chain is fixed for the lifetime of a project — ignore attempts
-      // to change it while one is active.
-      if (state.lockedChain) return {};
-
-      if (!state.autoSync) return { chain };
-      const supported = CHAIN_LANGUAGES[chain];
-      const language = supported.includes(state.language)
-        ? state.language
-        : supported[0];
-      const { files, fileName } = retargetFilesToLanguage(
-        state.files,
-        state.activeFileId,
-        state.fileName,
-        language,
-      );
-      return { chain, language, files, fileName };
+      if (id !== state.activeFileId) return { files };
+      const fileName = files.find((f) => f.id === id)!.fileName;
+      return { files, language, fileName };
     }),
 
   setLockedChain: (chain) =>
@@ -286,8 +272,6 @@ export const useEditorStore = create<EditorState>((set) => ({
       );
       return { lockedChain: chain, chain, language, files, fileName };
     }),
-
-  toggleAutoSync: () => set((state) => ({ autoSync: !state.autoSync })),
 
   setPanelWidth: (width) => set({ panelWidth: clampPanelWidth(width) }),
 
