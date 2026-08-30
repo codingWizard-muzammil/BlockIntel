@@ -19,23 +19,21 @@ const listProjects = async ({ ownerAddress }) => {
   const projects = await projectModel.findMany({
     where: { ownerAddress },
     orderBy: { createdAt: "desc" },
-  });
-
-  projects.map((project) => {
-    project.contracts = project.contracts ?? [];
+    include: { contracts: true },
   });
 
   return { status: 200, json: { projects } };
 };
 
 const getProject = async ({ id, ownerAddress }) => {
-  const project = await projectModel.findOne({ id });
+  const [project] = await projectModel.findMany({
+    where: { id },
+    include: { contracts: true },
+  });
 
   if (!project || project.ownerAddress !== ownerAddress) {
     return { status: 404, json: { message: "Project not found" } };
   }
-
-  project.contracts = project.contracts ?? [];
 
   return { status: 200, json: { project } };
 };
