@@ -131,6 +131,7 @@ type EditorState = {
   fileName: string;
   language: string;
   chain: string;
+  lockedChain: string | null;
   autoSync: boolean;
   panelWidth: number;
   source: string;
@@ -142,6 +143,7 @@ type EditorState = {
   setFileName: (fileName: string) => void;
   setLanguage: (language: string) => void;
   setChain: (chain: string) => void;
+  setLockedChain: (chain: string | null) => void;
   toggleAutoSync: () => void;
   setPanelWidth: (width: number) => void;
   setSource: (source: string) => void;
@@ -166,6 +168,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   fileName: initialFileName,
   language: LANGUAGES[0],
   chain: CHAINS[0].name,
+  lockedChain: null,
   autoSync: true,
   panelWidth: getDefaultWidth(),
   source: "",
@@ -222,6 +225,16 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   setLanguage: (language) =>
     set((state) => {
+      // A project locks the editor to its chain — only languages that
+      // chain's toolchain supports can be selected (e.g. no writing .sol
+      // files inside a Solana project).
+      if (
+        state.lockedChain &&
+        !CHAIN_LANGUAGES[state.lockedChain].includes(language)
+      ) {
+        return {};
+      }
+
       const { files, fileName } = retargetFilesToLanguage(
         state.files,
         state.activeFileId,
@@ -229,6 +242,7 @@ export const useEditorStore = create<EditorState>((set) => ({
         language,
       );
 
+      if (state.lockedChain) return { language, files, fileName };
       if (!state.autoSync) return { language, files, fileName };
       const supportedChains = chainsSupporting(language);
       const chain = supportedChains.some((c) => c.name === state.chain)
@@ -239,6 +253,10 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   setChain: (chain) =>
     set((state) => {
+      // The chain is fixed for the lifetime of a project — ignore attempts
+      // to change it while one is active.
+      if (state.lockedChain) return {};
+
       if (!state.autoSync) return { chain };
       const supported = CHAIN_LANGUAGES[chain];
       const language = supported.includes(state.language)
@@ -251,6 +269,22 @@ export const useEditorStore = create<EditorState>((set) => ({
         language,
       );
       return { chain, language, files, fileName };
+    }),
+
+  setLockedChain: (chain) =>
+    set((state) => {
+      if (!chain) return { lockedChain: null };
+      const supported = CHAIN_LANGUAGES[chain] ?? [];
+      const language = supported.includes(state.language)
+        ? state.language
+        : (supported[0] ?? state.language);
+      const { files, fileName } = retargetFilesToLanguage(
+        state.files,
+        state.activeFileId,
+        state.fileName,
+        language,
+      );
+      return { lockedChain: chain, chain, language, files, fileName };
     }),
 
   toggleAutoSync: () => set((state) => ({ autoSync: !state.autoSync })),

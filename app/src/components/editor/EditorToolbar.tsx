@@ -36,8 +36,15 @@ function ChainBadge({
 }
 
 export function EditorToolbar() {
-  const { language, chain, autoSync, setLanguage, setChain, toggleAutoSync } =
-    useEditorStore();
+  const {
+    language,
+    chain,
+    lockedChain,
+    autoSync,
+    setLanguage,
+    setChain,
+    toggleAutoSync,
+  } = useEditorStore();
 
   const activeChain = CHAINS.find((c) => c.name === chain) ?? CHAINS[0];
 
@@ -60,26 +67,39 @@ export function EditorToolbar() {
         )}
       />
 
-      <Dropdown
-        label="Chain"
-        value={chain}
-        options={CHAINS}
-        getKey={(c) => c.name}
-        onChange={(next) => setChain(next.name)}
-        trigger={
-          <>
-            <ChainBadge chain={activeChain.name} />
-            {chain}
-          </>
-        }
-        renderOption={(c, selected) => (
-          <>
-            <ChainBadge chain={c.name} selected={selected} />
-            <span className="flex-1">{c.name}</span>
-            {selected && <Check className="size-3 shrink-0" />}
-          </>
-        )}
-      />
+      {lockedChain ? (
+        <span
+          title="This project's chain is fixed — create a new project to target a different chain"
+          className="relative flex items-center gap-2 rounded-md border border-border bg-input py-1.75 pl-3 pr-2.5 text-xs text-ink"
+        >
+          <span className="absolute -top-1.75 left-2.5 z-10 bg-canvas px-1 text-[10px] leading-none text-muted">
+            Chain
+          </span>
+          <ChainBadge chain={activeChain.name} />
+          {chain}
+        </span>
+      ) : (
+        <Dropdown
+          label="Chain"
+          value={chain}
+          options={CHAINS}
+          getKey={(c) => c.name}
+          onChange={(next) => setChain(next.name)}
+          trigger={
+            <>
+              <ChainBadge chain={activeChain.name} />
+              {chain}
+            </>
+          }
+          renderOption={(c, selected) => (
+            <>
+              <ChainBadge chain={c.name} selected={selected} />
+              <span className="flex-1">{c.name}</span>
+              {selected && <Check className="size-3 shrink-0" />}
+            </>
+          )}
+        />
+      )}
 
       {/* <button
         type="button"
