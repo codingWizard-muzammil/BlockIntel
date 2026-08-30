@@ -1,49 +1,39 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, LogOut, Settings, Wallet } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConnectWalletModal } from "@/components/wallet/ConnectWalletModal";
 import { useAuthStore } from "@/store/auth-store";
+import { useClickOutside } from "@/hooks/useClickOutside";
 import { truncateAddress } from "@/helpers/address";
-import { redirect } from "next/navigation";
-interface WalletOptions {
-  icon: any;
-  label: String;
-  fn: () => void;
+
+interface WalletOption {
+  icon: LucideIcon;
+  label: string;
+  onSelect: () => void;
 }
+
 function WalletControl() {
+  const router = useRouter();
   const { status, address, disconnect } = useAuthStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   useClickOutside(containerRef, () => setMenuOpen(false));
 
-  const walletOptions: WalletOptions[] = [
+  const walletOptions: WalletOption[] = [
     {
       icon: Settings,
       label: "Settings",
-      fn: () => redirect("/settings", "replace"),
+      onSelect: () => router.replace("/settings"),
     },
     {
       icon: LogOut,
       label: "Disconnect",
-      fn: () => disconnect(),
+      onSelect: () => disconnect(),
     },
   ];
-  function useClickOutside(
-    ref: React.RefObject<HTMLElement | null>,
-    onOutside: () => void,
-  ) {
-    useEffect(() => {
-      function handlePointerDown(event: PointerEvent) {
-        if (ref.current && !ref.current.contains(event.target as Node)) {
-          onOutside();
-        }
-      }
-      document.addEventListener("pointerdown", handlePointerDown);
-      return () =>
-        document.removeEventListener("pointerdown", handlePointerDown);
-    }, [ref, onOutside]);
-  }
 
   if (status === "connected" && address) {
     return (
@@ -59,10 +49,8 @@ function WalletControl() {
                 key={i}
                 type="button"
                 onClick={() => {
-                  setTimeout(() => {
-                    option.fn();
-                  }, 100);
                   setMenuOpen(false);
+                  option.onSelect();
                 }}
                 className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs text-ink transition-colors hover:bg-surface-muted"
               >
