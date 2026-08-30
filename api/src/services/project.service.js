@@ -3,9 +3,12 @@ const CorCrud = require("../utils/CorCrud");
 const projectModel = new CorCrud("projects");
 const contractModel = new CorCrud("contracts");
 
-const createProject = async ({ name, ownerAddress }) => {
+const createProject = async ({ name, description, chain, purpose, ownerAddress }) => {
   const project = await projectModel.create({
     name,
+    description,
+    chain,
+    purpose,
     ownerAddress,
   });
 

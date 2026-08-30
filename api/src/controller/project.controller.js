@@ -1,10 +1,16 @@
 const { project } = require("../services");
 
 const create = async (req, res) => {
-  const { name } = req.body;
+  const { name, description, chain, purpose } = req.body;
   const { address } = req.user;
 
-  const { json, status } = await project.createProject({ name, ownerAddress: address });
+  const { json, status } = await project.createProject({
+    name,
+    description,
+    chain,
+    purpose,
+    ownerAddress: address,
+  });
 
   res.status(status).json(json);
 };
