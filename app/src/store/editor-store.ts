@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { formatSolidity } from "@/lib/format-solidity";
-import { ValueOf } from "next/dist/shared/lib/constants";
 
 export type extensions = "sol" | "vyper" | "rs" | "move" | "";
 
