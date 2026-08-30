@@ -11,7 +11,12 @@ import {
   type ApiProject,
   type CreateProjectInput,
 } from "@/api/projects";
-import { createContractRequest, type CreateContractInput } from "@/api/contracts";
+import {
+  createContractRequest,
+  deleteContractRequest,
+  type CreateContractInput,
+} from "@/api/contracts";
+import { useEditorStore } from "./editor-store";
 
 export type { ApiProject };
 
@@ -32,6 +37,8 @@ type ProjectState = {
   createError: string | null;
   deleteStatus: RequestStatus;
   deleteError: string | null;
+  deleteContractStatus: RequestStatus;
+  deleteContractError: string | null;
 
   restore: () => void;
   setActiveProjectId: (id: string | null) => void;
@@ -42,7 +49,8 @@ type ProjectState = {
   fetchProject: (id: string) => Promise<ApiProject | null>;
   createProject: (input: CreateProjectInput) => Promise<ApiProject | null>;
   deleteProject: (id: string) => Promise<boolean>;
-  saveContract: (input: CreateContractInput) => void;
+  saveContract: (fileId: string, input: CreateContractInput) => void;
+  deleteContract: (contractId: string, projectId: string) => Promise<boolean>;
 };
 
 function readStored(): string | null {
@@ -75,6 +83,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   createError: null,
   deleteStatus: "idle",
   deleteError: null,
+  deleteContractStatus: "idle",
+  deleteContractError: null,
 
   restore: () => {
     if (get().hydrated) return;
@@ -155,14 +165,31 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   // Fire-and-forget: persists a newly created contract without any loading
   // state for the UI to bind a spinner to.
-  saveContract: (input) => {
+  saveContract: (fileId, input) => {
     createContractRequest(input)
-      .then(() => {
+      .then((contract) => {
+        useEditorStore.getState().setFileContract(fileId, contract);
         queryClient.invalidateQueries({ queryKey: ["projects", input.projectId] });
       })
       .catch((error) => {
         console.error("Failed to save contract in the background", error);
       });
+  },
+
+  deleteContract: async (contractId, projectId) => {
+    set({ deleteContractStatus: "loading", deleteContractError: null });
+    try {
+      await deleteContractRequest(contractId);
+      queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+      set({ deleteContractStatus: "success" });
+      return true;
+    } catch (error) {
+      set({
+        deleteContractStatus: "error",
+        deleteContractError: (error as Error).message,
+      });
+      return false;
+    }
   },
 }));
 

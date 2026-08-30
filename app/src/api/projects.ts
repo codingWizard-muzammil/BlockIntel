@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import type { ApiContract } from "./contracts";
 
 export type ApiProject = {
   id: string;
@@ -8,6 +9,9 @@ export type ApiProject = {
   purpose: string;
   ownerAddress: string;
   createdAt: string;
+  // Only populated by list/getOne, which `include: { contracts: true }` —
+  // the create response returns the bare project row.
+  contracts?: ApiContract[];
 };
 
 export type CreateProjectInput = {

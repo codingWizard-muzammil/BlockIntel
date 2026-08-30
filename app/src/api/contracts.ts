@@ -22,3 +22,8 @@ export async function createContractRequest(input: CreateContractInput) {
   const { data } = await apiClient.post<{ contract: ApiContract }>("/contracts", input);
   return data.contract;
 }
+
+export async function deleteContractRequest(id: string) {
+  await apiClient.delete(`/contracts/${id}`);
+  return id;
+}

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { formatSolidity } from "@/lib/format-solidity";
+import type { ApiContract } from "@/api/contracts";
 
 export type extensions = "sol" | "vyper" | "rs" | "move" | "";
 
@@ -79,12 +80,20 @@ export function clampPanelWidth(width: number) {
   return newWidth;
 }
 
+// Mirrors the fields on the `contracts` Prisma model so a saved file can
+// carry its DB identity; `id` stays the local tab id, `contractId` is null
+// until the file has actually been persisted as a contract.
 export type EditorFile = {
   id: string;
-  fileName: string;
+  contractId: string | null;
+  name: string;
   source: string;
   extension: extensions;
   language: string;
+  address: string | null;
+  projectId: string | null;
+  ownerAddress: string | null;
+  createdAt: string | null;
 };
 
 function createFileId() {
@@ -107,25 +116,35 @@ function renameFileExtension(fileName: string, extension: extensions) {
 function retargetFilesToLanguage(
   files: EditorFile[],
   activeFileId: string,
-  fallbackFileName: string,
+  fallbackName: string,
   language: string,
 ) {
   const extension = defaultExtension(language);
   const nextFiles = files.map((f) => ({
     ...f,
-    fileName: renameFileExtension(f.fileName, extension),
+    name: renameFileExtension(f.name, extension),
     extension,
     language,
   }));
-  const fileName =
-    nextFiles.find((f) => f.id === activeFileId)?.fileName ?? fallbackFileName;
-  return { files: nextFiles, fileName };
+  const name =
+    nextFiles.find((f) => f.id === activeFileId)?.name ?? fallbackName;
+  return { files: nextFiles, name };
+}
+
+function emptyContractLinkage() {
+  return {
+    contractId: null,
+    address: null,
+    projectId: null,
+    ownerAddress: null,
+    createdAt: null,
+  };
 }
 
 type EditorState = {
   files: EditorFile[];
   activeFileId: string;
-  fileName: string;
+  name: string;
   language: string;
   chain: string;
   lockedChain: string | null;
@@ -136,8 +155,10 @@ type EditorState = {
   addFile: () => string;
   setActiveFile: (id: string) => void;
   closeFile: (id: string) => void;
-  setFileName: (fileName: string) => void;
+  setFileName: (name: string) => void;
   setFileLanguage: (id: string, language: string) => void;
+  setFileContract: (id: string, contract: ApiContract) => void;
+  setFilesFromContracts: (contracts: ApiContract[]) => void;
   setLockedChain: (chain: string | null) => void;
   setPanelWidth: (width: number) => void;
   setSource: (source: string) => void;
@@ -150,17 +171,9 @@ const initialExtension = defaultExtension(LANGUAGES[0]);
 const initialFileName = `Untitled1.${initialExtension}`;
 
 export const useEditorStore = create<EditorState>((set) => ({
-  files: [
-    {
-      id: initialFileId,
-      fileName: initialFileName,
-      source: "",
-      extension: initialExtension,
-      language: LANGUAGES[0],
-    },
-  ],
+  files: [],
   activeFileId: initialFileId,
-  fileName: initialFileName,
+  name: initialFileName,
   language: LANGUAGES[0],
   chain: CHAINS[0].name,
   lockedChain: null,
@@ -171,22 +184,29 @@ export const useEditorStore = create<EditorState>((set) => ({
   addFile: () => {
     const id = createFileId();
     set((state) => {
-      const existingNames = new Set(state.files.map((f) => f.fileName));
+      const existingNames = new Set(state.files.map((f) => f.name));
       const language =
         state.files.find((f) => f.id === state.activeFileId)?.language ??
         state.language;
       const extension = defaultExtension(language);
       let index = state.files.length + 1;
-      let fileName = `Untitled${index}.${extension}`;
-      while (existingNames.has(fileName)) {
+      let name = `Untitled${index}.${extension}`;
+      while (existingNames.has(name)) {
         index += 1;
-        fileName = `Untitled${index}.${extension}`;
+        name = `Untitled${index}.${extension}`;
       }
-      const file: EditorFile = { id, fileName, source: "", extension, language };
+      const file: EditorFile = {
+        id,
+        name,
+        source: "",
+        extension,
+        language,
+        ...emptyContractLinkage(),
+      };
       return {
         files: [...state.files, file],
         activeFileId: id,
-        fileName: file.fileName,
+        name: file.name,
         source: file.source,
         language,
       };
@@ -200,7 +220,7 @@ export const useEditorStore = create<EditorState>((set) => ({
       if (!file) return {};
       return {
         activeFileId: id,
-        fileName: file.fileName,
+        name: file.name,
         source: file.source,
         language: file.language,
       };
@@ -215,17 +235,17 @@ export const useEditorStore = create<EditorState>((set) => ({
       return {
         files,
         activeFileId: nextActive.id,
-        fileName: nextActive.fileName,
+        name: nextActive.name,
         source: nextActive.source,
         language: nextActive.language,
       };
     }),
 
-  setFileName: (fileName) =>
+  setFileName: (name) =>
     set((state) => ({
-      fileName,
+      name,
       files: state.files.map((f) =>
-        f.id === state.activeFileId ? { ...f, fileName } : f,
+        f.id === state.activeFileId ? { ...f, name } : f,
       ),
     })),
 
@@ -246,14 +266,72 @@ export const useEditorStore = create<EditorState>((set) => ({
               ...f,
               language,
               extension,
-              fileName: renameFileExtension(f.fileName, extension),
+              name: renameFileExtension(f.name, extension),
             }
           : f,
       );
 
       if (id !== state.activeFileId) return { files };
-      const fileName = files.find((f) => f.id === id)!.fileName;
-      return { files, language, fileName };
+      const name = files.find((f) => f.id === id)!.name;
+      return { files, language, name };
+    }),
+
+  // Called once a file has been persisted via POST /v1/contracts, so the
+  // tab carries the same identity as its row in the `contracts` table.
+  setFileContract: (id, contract) =>
+    set((state) => ({
+      files: state.files.map((f) =>
+        f.id === id
+          ? {
+              ...f,
+              contractId: contract.id,
+              address: contract.address,
+              projectId: contract.projectId,
+              ownerAddress: contract.ownerAddress,
+              createdAt: contract.createdAt,
+            }
+          : f,
+      ),
+    })),
+
+  // Replaces the open tabs with one per contract already saved to this
+  // project (name/language/chain-linkage only — `source` isn't returned by
+  // the backend yet, since `contracts.source` stores a filesystem path, not
+  // the file's content).
+  setFilesFromContracts: (contracts) =>
+    set(() => {
+      const files: EditorFile[] =
+        contracts.length > 0
+          ? contracts.map((c) => ({
+              id: createFileId(),
+              contractId: c.id,
+              name: c.name,
+              source: "",
+              extension: defaultExtension(c.language),
+              language: c.language,
+              address: c.address,
+              projectId: c.projectId,
+              ownerAddress: c.ownerAddress,
+              createdAt: c.createdAt,
+            }))
+          : [
+              {
+                id: createFileId(),
+                name: initialFileName,
+                source: "",
+                extension: initialExtension,
+                language: LANGUAGES[0],
+                ...emptyContractLinkage(),
+              },
+            ];
+      const active = files[0];
+      return {
+        files,
+        activeFileId: active.id,
+        name: active.name,
+        source: active.source,
+        language: active.language,
+      };
     }),
 
   setLockedChain: (chain) =>
@@ -263,13 +341,13 @@ export const useEditorStore = create<EditorState>((set) => ({
       const language = supported.includes(state.language)
         ? state.language
         : (supported[0] ?? state.language);
-      const { files, fileName } = retargetFilesToLanguage(
+      const { files, name } = retargetFilesToLanguage(
         state.files,
         state.activeFileId,
-        state.fileName,
+        state.name,
         language,
       );
-      return { lockedChain: chain, chain, language, files, fileName };
+      return { lockedChain: chain, chain, language, files, name };
     }),
 
   setPanelWidth: (width) => set({ panelWidth: clampPanelWidth(width) }),

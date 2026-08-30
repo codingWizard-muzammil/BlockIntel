@@ -7,7 +7,9 @@ import {
   type EditorFile,
 } from "@/store/editor-store";
 import { useClickOutside } from "@/hooks/useClickOutside";
+import { useDeleteContractFlow } from "@/hooks/useDeleteContractFlow";
 import { useProjectStore } from "@/store/project-store";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 function LanguageMenu({
   file,
@@ -22,9 +24,10 @@ function LanguageMenu({
   menuRef: React.RefObject<HTMLDivElement | null>;
   onSelect: (language: string) => void;
 }) {
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(
-    null,
-  );
+  const [position, setPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
 
   useLayoutEffect(() => {
     function updatePosition() {
@@ -76,15 +79,16 @@ function FileTab({
   languages,
   autoEdit,
   onCreate,
+  onRequestDelete,
 }: {
   file: EditorFile;
   languages: string[];
   autoEdit: boolean;
   onCreate: (file: EditorFile, name: string) => void;
+  onRequestDelete: (file: EditorFile) => void;
 }) {
   const activeFileId = useEditorStore((s) => s.activeFileId);
   const setActiveFile = useEditorStore((s) => s.setActiveFile);
-  const closeFile = useEditorStore((s) => s.closeFile);
   const setFileName = useEditorStore((s) => s.setFileName);
   const setFileLanguage = useEditorStore((s) => s.setFileLanguage);
   const fileCount = useEditorStore((s) => s.files.length);
@@ -92,9 +96,10 @@ function FileTab({
   const isActive = file.id === activeFileId;
   const multiLanguage = languages.length > 1;
   const extension = file.extension ? `.${file.extension}` : "";
-  const baseName = extension && file.fileName.endsWith(extension)
-    ? file.fileName.slice(0, -extension.length)
-    : file.fileName;
+  const baseName =
+    extension && file.name.endsWith(extension)
+      ? file.name.slice(0, -extension.length)
+      : file.name;
 
   const [isEditing, setIsEditing] = useState(autoEdit);
   const [draftName, setDraftName] = useState(baseName);
@@ -199,16 +204,19 @@ function FileTab({
           )}
         </div>
       ) : (
-        <span className="cursor-pointer text-xs text-ink" onClick={handleNameClick}>
-          {file.fileName}
+        <span
+          className="cursor-pointer text-xs text-ink"
+          onClick={handleNameClick}
+        >
+          {file.name}
         </span>
       )}
       {fileCount > 1 ? (
         <button
-          aria-label={`Close ${file.fileName}`}
+          aria-label={`Close ${file.name}`}
           onClick={(e) => {
             e.stopPropagation();
-            closeFile(file.id);
+            onRequestDelete(file);
           }}
           className="text-muted opacity-0 hover:text-ink group-hover:opacity-100"
         >
@@ -222,11 +230,10 @@ function FileTab({
 }
 
 export function FileTabs() {
-  const { files, addFile } = useEditorStore();
-  const lockedChain = useEditorStore((s) => s.lockedChain);
-  const activeProjectId = useProjectStore((s) => s.activeProjectId);
-  const saveContract = useProjectStore((s) => s.saveContract);
+  const { files, addFile, lockedChain } = useEditorStore();
+  const { activeProjectId, saveContract } = useProjectStore();
   const [autoEditFileId, setAutoEditFileId] = useState<string | null>(null);
+  const { requestDelete, dialogProps } = useDeleteContractFlow();
 
   const languages = lockedChain ? CHAIN_LANGUAGES[lockedChain] : [];
 
@@ -238,7 +245,7 @@ export function FileTabs() {
   function handleFileCreate(file: EditorFile, name: string) {
     setAutoEditFileId(null);
     if (!activeProjectId) return;
-    saveContract({
+    saveContract(file.id, {
       projectId: activeProjectId,
       name,
       language: file.language,
@@ -255,6 +262,7 @@ export function FileTabs() {
           languages={languages}
           autoEdit={autoEditFileId === file.id}
           onCreate={handleFileCreate}
+          onRequestDelete={requestDelete}
         />
       ))}
       <button
@@ -264,6 +272,7 @@ export function FileTabs() {
       >
         <Plus className="size-3" />
       </button>
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }
