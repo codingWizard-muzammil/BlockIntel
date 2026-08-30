@@ -1,15 +1,50 @@
+const path = require("node:path");
 const CorCrud = require("../utils/CorCrud");
+const fs = require("node:fs/promises");
+const { CHAIN_LANGUAGES, LANGUAGE_EXTENSIONS } = require("../constants/chains");
 
 const projectModel = new CorCrud("projects");
 const contractModel = new CorCrud("contracts");
 
-const createProject = async ({ name, description, chain, purpose, ownerAddress }) => {
+const createProject = async ({
+  name,
+  description,
+  chain,
+  purpose,
+  ownerAddress,
+}) => {
   const project = await projectModel.create({
     name,
     description,
     chain,
     purpose,
     ownerAddress,
+  });
+  const contractId = await crypto.randomUUID();
+  const language = CHAIN_LANGUAGES[chain.toLowerCase()];
+  const extension =
+    LANGUAGE_EXTENSIONS[
+      language.length > 1 ? language[0]?.toLowerCase() : language.toLowerCase()
+    ];
+
+  const pth = path.join(
+    __dirname,
+    "../../../contracts",
+    ownerAddress,
+    String(project.id),
+    `${contractId}.${extension}`,
+  );
+
+  await fs.mkdir(path.dirname(pth), { recursive: true });
+  await fs.writeFile(pth, "", "utf8");
+
+  await contractModel.create({
+    id: contractId,
+    name: `untitled.${extension}`,
+    projectId: project.id,
+    ownerAddress,
+    language: language.length > 1 ? language[0] : language,
+    source: pth,
   });
 
   return { status: 201, json: { project } };
