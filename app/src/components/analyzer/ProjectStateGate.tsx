@@ -1,10 +1,25 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { FolderX, Loader2, Wallet } from "lucide-react";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { useAuthStore } from "@/store/auth-store";
 import { useProjectStore, type ApiProject } from "@/store/project-store";
+
+const GatedProjectContext = createContext<ApiProject | null>(null);
+
+/**
+ * Reads the project resolved by the nearest enclosing `ProjectStateGate`.
+ * Only valid inside that gate's `children` render tree, where a non-null
+ * project is already guaranteed.
+ */
+export function useGatedProject(): ApiProject {
+  const project = useContext(GatedProjectContext);
+  if (!project) {
+    throw new Error("useGatedProject must be used inside a ProjectStateGate");
+  }
+  return project;
+}
 
 export function ProjectStateGate({
   projectId,
@@ -53,5 +68,9 @@ export function ProjectStateGate({
     );
   }
 
-  return <>{children(project)}</>;
+  return (
+    <GatedProjectContext.Provider value={project}>
+      {children(project)}
+    </GatedProjectContext.Provider>
+  );
 }
