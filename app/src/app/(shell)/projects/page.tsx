@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
-import { FolderKanban, Loader2, Plus, Trash2, Wallet } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FolderKanban, Loader2, Plus, Wallet } from "lucide-react";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CreateProjectModal } from "@/components/editor/CreateProjectModal";
+import { ProjectCard } from "@/components/editor/ProjectCard";
 import { useAuthStore } from "@/store/auth-store";
 import { useProjectStore, type ApiProject } from "@/store/project-store";
 import { Button } from "@/components/ui/Button";
@@ -15,11 +15,16 @@ export default function HistoryPage() {
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const projects = useProjectStore((s) => s.projects);
   const projectsStatus = useProjectStore((s) => s.projectsStatus);
+  const fetchProjects = useProjectStore((s) => s.fetchProjects);
   const deleteProject = useProjectStore((s) => s.deleteProject);
   const deleteStatus = useProjectStore((s) => s.deleteStatus);
   const deleteError = useProjectStore((s) => s.deleteError);
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<ApiProject | null>(null);
+
+  useEffect(() => {
+    if (authStatus === "connected") fetchProjects();
+  }, [authStatus, fetchProjects]);
 
   async function handleConfirmDelete() {
     if (!pendingDelete) return;
@@ -67,36 +72,12 @@ export default function HistoryPage() {
       {projects.length ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Link
+            <ProjectCard
               key={project.id}
-              href={`/contract/${project.id}/summary`}
-              onClick={() => setActiveProjectId(project.id)}
-              className="group flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 transition-colors hover:border-accent"
-            >
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft">
-                  <FolderKanban className="size-4 text-accent" />
-                </span>
-                <span className="truncate text-sm font-semibold text-ink">
-                  {project.name}
-                </span>
-                <button
-                  type="button"
-                  aria-label={`Delete ${project.name}`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setPendingDelete(project);
-                  }}
-                  className="ml-auto shrink-0 rounded-md p-1 text-muted opacity-0 transition-colors hover:text-danger group-hover:opacity-100"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
-              </div>
-              <span className="text-xs text-muted">
-                Created {new Date(project.createdAt).toLocaleDateString()}
-              </span>
-            </Link>
+              project={project}
+              onOpen={() => setActiveProjectId(project.id)}
+              onDelete={() => setPendingDelete(project)}
+            />
           ))}
         </div>
       ) : (
