@@ -9,6 +9,7 @@ import {
   fetchProject as fetchProjectRequest,
   fetchProjects as fetchProjectsRequest,
   type ApiProject,
+  type CreateProjectInput,
 } from "@/api/projects";
 
 export type { ApiProject };
@@ -38,7 +39,7 @@ type ProjectState = {
 
   fetchProjects: () => Promise<void>;
   fetchProject: (id: string) => Promise<ApiProject | null>;
-  createProject: (name: string) => Promise<ApiProject | null>;
+  createProject: (input: CreateProjectInput) => Promise<ApiProject | null>;
   deleteProject: (id: string) => Promise<boolean>;
 };
 
@@ -121,10 +122,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  createProject: async (name) => {
+  createProject: async (input) => {
     set({ createStatus: "loading", createError: null });
     try {
-      const project = await createProjectRequest(name);
+      const project = await createProjectRequest(input);
       get().upsertProject(project);
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       set({ createStatus: "success" });

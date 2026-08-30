@@ -3,8 +3,18 @@ import { apiClient } from "./client";
 export type ApiProject = {
   id: string;
   name: string;
+  description: string | null;
+  chain: string;
+  purpose: string;
   ownerAddress: string;
   createdAt: string;
+};
+
+export type CreateProjectInput = {
+  name: string;
+  chain: string;
+  purpose: string;
+  description?: string;
 };
 
 export async function fetchProjects() {
@@ -17,8 +27,8 @@ export async function fetchProject(id: string) {
   return data.project;
 }
 
-export async function createProjectRequest(name: string) {
-  const { data } = await apiClient.post<{ project: ApiProject }>("/projects", { name });
+export async function createProjectRequest(input: CreateProjectInput) {
+  const { data } = await apiClient.post<{ project: ApiProject }>("/projects", input);
   return data.project;
 }
 

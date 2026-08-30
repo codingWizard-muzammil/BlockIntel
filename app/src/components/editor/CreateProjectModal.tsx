@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, X } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import Dropdown from "@/components/ui/Dropdown";
+import { ChainIcon } from "@/components/editor/chain-icons";
+import { CHAINS } from "@/store/editor-store";
 import { useProjectStore } from "@/store/project-store";
+
+const initialChain = CHAINS[0].name;
 
 export function CreateProjectModal({
   open,
@@ -19,9 +24,19 @@ export function CreateProjectModal({
   const createStatus = useProjectStore((s) => s.createStatus);
   const createError = useProjectStore((s) => s.createError);
   const [name, setName] = useState("");
+  const [chain, setChain] = useState(initialChain);
+  const [purpose, setPurpose] = useState("");
+  const [description, setDescription] = useState("");
+
+  function reset() {
+    setName("");
+    setChain(initialChain);
+    setPurpose("");
+    setDescription("");
+  }
 
   function handleClose() {
-    setName("");
+    reset();
     onClose();
   }
 
@@ -29,7 +44,7 @@ export function CreateProjectModal({
     if (!open) return;
     function handleKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setName("");
+        reset();
         onClose();
       }
     }
@@ -39,11 +54,19 @@ export function CreateProjectModal({
 
   if (!open) return null;
 
+  const trimmedName = name.trim();
+  const trimmedPurpose = purpose.trim();
+  const canSubmit = Boolean(trimmedName && chain && trimmedPurpose);
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const project = await createProject(trimmed);
+    if (!canSubmit) return;
+    const project = await createProject({
+      name: trimmedName,
+      chain,
+      purpose: trimmedPurpose,
+      description: description.trim() || undefined,
+    });
     if (!project) return;
     setActiveProjectId(project.id);
     handleClose();
@@ -58,7 +81,7 @@ export function CreateProjectModal({
       onClick={handleClose}
     >
       <div
-        className="w-80 overflow-hidden rounded-xl border border-border bg-surface shadow-2xl shadow-black/50"
+        className="w-96 overflow-hidden rounded-xl border border-border bg-surface shadow-2xl shadow-black/50"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -81,7 +104,49 @@ export function CreateProjectModal({
             disabled={isPending}
             className="rounded-md border border-border bg-input px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent disabled:opacity-60"
           />
-          <Button type="submit" variant="primary" disabled={!name.trim() || isPending}>
+
+          <Dropdown
+            label="Chain"
+            value={chain}
+            options={CHAINS}
+            getKey={(c) => c.name}
+            onChange={(next) => setChain(next.name)}
+            className="w-full"
+            triggerClassName="w-full justify-between"
+            menuClassName="w-full"
+            trigger={
+              <span className="flex flex-1 items-center gap-2">
+                <ChainIcon chain={chain} className="size-3.5" />
+                {chain}
+              </span>
+            }
+            renderOption={(c, selected) => (
+              <>
+                <ChainIcon chain={c.name} className="size-3.5" />
+                <span className="flex-1">{c.name}</span>
+                {selected && <Check className="size-3 shrink-0" />}
+              </>
+            )}
+          />
+
+          <input
+            value={purpose}
+            onChange={(event) => setPurpose(event.target.value)}
+            placeholder="Purpose (e.g. NFT marketplace, DeFi vault...)"
+            disabled={isPending}
+            className="rounded-md border border-border bg-input px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent disabled:opacity-60"
+          />
+
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Description (optional)"
+            disabled={isPending}
+            rows={3}
+            className="resize-none rounded-md border border-border bg-input px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent disabled:opacity-60"
+          />
+
+          <Button type="submit" variant="primary" disabled={!canSubmit || isPending}>
             {isPending && <Loader2 className="size-3.5 animate-spin" />}
             Create project
           </Button>
