@@ -10,4 +10,8 @@ const create = joi.object({
   source: joi.string().allow("").optional(),
 });
 
-module.exports = { create };
+const remove = joi.object({
+  id: joi.string().uuid().required(),
+});
+
+module.exports = { create, remove };

@@ -15,4 +15,13 @@ const create = async (req, res) => {
   res.status(status).json(json);
 };
 
-module.exports = { create };
+const remove = async (req, res) => {
+  const { id } = req.params;
+  const { address } = req.user;
+
+  const { json, status } = await contract.deleteContract({ id, ownerAddress: address });
+
+  res.status(status).json(json);
+};
+
+module.exports = { create, remove };
