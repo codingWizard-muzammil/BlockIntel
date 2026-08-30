@@ -33,7 +33,7 @@ Run from `app/`. Package manager: bun.
 
 No test suite exists yet.
 
-Frontend calls the backend via `NEXT_PUBLIC_API_URL`, which defaults to `http://localhost:8080/v1` (`src/lib/api.ts`) — this does not match the backend's own default port (3000), so set both explicitly when running the two together locally.
+Frontend calls the backend via `NEXT_PUBLIC_API_URL`, which defaults to `http://localhost:8080/v1` (`src/api/client.ts`) — this does not match the backend's own default port (3000), so set both explicitly when running the two together locally.
 
 ## Architecture
 
@@ -50,7 +50,9 @@ To support a new chain, add a verifier to the `verifiers` map in `verifySignatur
 `server.js` connects Redis and Postgres before calling `app.listen`. Route groups are registered declaratively in `src/routes/index.js` (an array of `{name, file}` mounted under `/v1`) rather than a chain of `app.use` calls — add new route groups there. Each route composes Joi validation (`src/middleware/validate.middeware.js`) → controller → service. `CorCrud` (`src/utils/CorCrud.js`) is a thin generic wrapper around a single Prisma model (e.g. `new CorCrud("Users")`); services use it instead of importing `prisma` directly.
 
 ### Frontend structure
-Next.js App Router with a `(shell)` route group (`app/src/app/(shell)/`) that wraps all main pages in a persistent Header/Sidebar/Footer: `/`, `/history`, `/settings`, and `/contract/[address]/{summary,attacks,improvements,playground}`. Client state lives in two zustand stores: `auth-store.ts` (wallet session, persisted to `localStorage`) and `editor-store.ts` (active contract source, language, target chain — the language↔chain pairing is enforced through `CHAIN_LANGUAGES` / `chainsSupporting`). `lib/api.ts` is the single fetch wrapper used for all backend calls.
+Next.js App Router with a `(shell)` route group (`app/src/app/(shell)/`) that wraps all main pages in a persistent Header/Sidebar/Footer: `/`, `/projects`, `/settings`, and `/contract/[id]/{summary,attacks,improvements,playground}`. Client state lives in three zustand stores: `auth-store.ts` (wallet session, persisted to `localStorage`), `project-store.ts` (project list/CRUD state), and `editor-store.ts` (active contract source, language, target chain — the language↔chain pairing is enforced through `CHAIN_LANGUAGES`). `src/api/client.ts` is the single axios instance used for all backend calls, alongside typed request functions in `src/api/auth.ts` and `src/api/projects.ts`.
+
+Components never call `src/api/*` directly — only `auth-store.ts` and `project-store.ts` do, wrapping each call in `queryClient.fetchQuery`/`invalidateQueries` (the shared `QueryClient` from `src/lib/query-client.ts`) so TanStack Query's cache/dedup sits underneath plain store actions. Components call the store's actions (e.g. `useProjectStore((s) => s.fetchProjects)`); they never construct queries or mutations themselves. Keep new data flows in this shape: component → store action → `api/*` function wrapped in the shared `queryClient`.
 
 ## Things to check before relying on them
 
