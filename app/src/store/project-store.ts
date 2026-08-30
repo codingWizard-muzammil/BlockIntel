@@ -11,6 +11,7 @@ import {
   type ApiProject,
   type CreateProjectInput,
 } from "@/api/projects";
+import { createContractRequest, type CreateContractInput } from "@/api/contracts";
 
 export type { ApiProject };
 
@@ -41,6 +42,7 @@ type ProjectState = {
   fetchProject: (id: string) => Promise<ApiProject | null>;
   createProject: (input: CreateProjectInput) => Promise<ApiProject | null>;
   deleteProject: (id: string) => Promise<boolean>;
+  saveContract: (input: CreateContractInput) => void;
 };
 
 function readStored(): string | null {
@@ -149,6 +151,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       set({ deleteStatus: "error", deleteError: (error as Error).message });
       return false;
     }
+  },
+
+  // Fire-and-forget: persists a newly created contract without any loading
+  // state for the UI to bind a spinner to.
+  saveContract: (input) => {
+    createContractRequest(input)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["projects", input.projectId] });
+      })
+      .catch((error) => {
+        console.error("Failed to save contract in the background", error);
+      });
   },
 }));
 
