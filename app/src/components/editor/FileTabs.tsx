@@ -6,23 +6,7 @@ import {
   useEditorStore,
   type EditorFile,
 } from "@/store/editor-store";
-
-function useOutsideClick(
-  refs: React.RefObject<HTMLElement | null>[],
-  onOutside: () => void,
-  enabled: boolean,
-) {
-  useEffect(() => {
-    if (!enabled) return;
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target as Node;
-      const inside = refs.some((r) => r.current?.contains(target));
-      if (!inside) onOutside();
-    }
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [refs, onOutside, enabled]);
-}
+import { useClickOutside } from "@/hooks/useClickOutside";
 
 function LanguageMenu({
   file,
@@ -142,7 +126,7 @@ function FileTab({
     stopEditing();
   }
 
-  useOutsideClick([editRef, menuRef], commit, isEditing);
+  useClickOutside([editRef, menuRef], commit, isEditing);
 
   function handleNameClick() {
     if (!isActive) {

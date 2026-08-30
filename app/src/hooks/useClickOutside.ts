@@ -3,16 +3,19 @@
 import { useEffect } from "react";
 
 export function useClickOutside(
-  ref: React.RefObject<HTMLElement | null>,
+  refs: React.RefObject<HTMLElement | null> | React.RefObject<HTMLElement | null>[],
   onOutside: () => void,
+  enabled = true,
 ) {
   useEffect(() => {
+    if (!enabled) return;
+    const refList = Array.isArray(refs) ? refs : [refs];
     function handlePointerDown(event: PointerEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        onOutside();
-      }
+      const target = event.target as Node;
+      const inside = refList.some((ref) => ref.current?.contains(target));
+      if (!inside) onOutside();
     }
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [ref, onOutside]);
+  }, [refs, onOutside, enabled]);
 }
