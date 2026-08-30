@@ -7,6 +7,7 @@ import {
   type EditorFile,
 } from "@/store/editor-store";
 import { useClickOutside } from "@/hooks/useClickOutside";
+import { useProjectStore } from "@/store/project-store";
 
 function LanguageMenu({
   file,
@@ -74,10 +75,12 @@ function FileTab({
   file,
   languages,
   autoEdit,
+  onCreate,
 }: {
   file: EditorFile;
   languages: string[];
   autoEdit: boolean;
+  onCreate: (file: EditorFile, name: string) => void;
 }) {
   const activeFileId = useEditorStore((s) => s.activeFileId);
   const setActiveFile = useEditorStore((s) => s.setActiveFile);
@@ -122,7 +125,11 @@ function FileTab({
 
   function commit() {
     const trimmed = draftName.trim();
-    if (trimmed) setFileName(trimmed + extension);
+    if (trimmed) {
+      const finalName = trimmed + extension;
+      setFileName(finalName);
+      if (autoEdit) onCreate(file, finalName);
+    }
     stopEditing();
   }
 
@@ -217,13 +224,26 @@ function FileTab({
 export function FileTabs() {
   const { files, addFile } = useEditorStore();
   const lockedChain = useEditorStore((s) => s.lockedChain);
+  const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const saveContract = useProjectStore((s) => s.saveContract);
   const [autoEditFileId, setAutoEditFileId] = useState<string | null>(null);
 
   const languages = lockedChain ? CHAIN_LANGUAGES[lockedChain] : [];
 
   function handleAddFile() {
     const id = addFile();
-    if (languages.length > 1) setAutoEditFileId(id);
+    setAutoEditFileId(id);
+  }
+
+  function handleFileCreate(file: EditorFile, name: string) {
+    setAutoEditFileId(null);
+    if (!activeProjectId) return;
+    saveContract({
+      projectId: activeProjectId,
+      name,
+      language: file.language,
+      source: file.source,
+    });
   }
 
   return (
@@ -234,6 +254,7 @@ export function FileTabs() {
           file={file}
           languages={languages}
           autoEdit={autoEditFileId === file.id}
+          onCreate={handleFileCreate}
         />
       ))}
       <button
