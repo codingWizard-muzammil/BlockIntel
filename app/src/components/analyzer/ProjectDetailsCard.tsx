@@ -6,6 +6,8 @@ import type { ApiProject } from "@/store/project-store";
 export function ProjectDetailsCard({ project }: { project: ApiProject }) {
   const rows: [string, string][] = [
     ["Project Name", project.name],
+    ["Chain", project.chain],
+    ["Purpose", project.purpose],
     ["Owner", truncateAddress(project.ownerAddress)],
     ["Created", new Date(project.createdAt).toLocaleDateString()],
   ];
@@ -22,6 +24,12 @@ export function ProjectDetailsCard({ project }: { project: ApiProject }) {
             <span className="text-sm text-ink">{value}</span>
           </div>
         ))}
+        {project.description && (
+          <div className="flex flex-col gap-1 border-t border-border-muted pt-3">
+            <span className="text-sm text-muted">Description</span>
+            <span className="text-sm text-ink">{project.description}</span>
+          </div>
+        )}
       </div>
     </Card>
   );
