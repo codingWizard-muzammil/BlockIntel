@@ -36,10 +36,14 @@ model projects {
 }
 
 model contracts {
-  address      String @unique
-  name         String @db.VarChar(150)
+  id           String   @id @default(uuid())
+  address      String?  @unique
+  name         String   @db.VarChar(150)
   projectId    String
   ownerAddress String
+  language     String
+  source       String   @default("") @db.Text
+  createdAt    DateTime @default(now())
 
   project projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
