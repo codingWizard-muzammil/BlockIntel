@@ -1,15 +1,11 @@
 import { ArrowRight, Lightbulb } from "lucide-react";
 import { Card, CardHeading } from "@/components/ui/Card";
-import { SeverityBadge } from "@/components/ui/SeverityBadge";
+import { SeverityCardItem } from "@/components/ui/SeverityCardItem";
 import type { Improvement } from "@/types/analysis";
 
 function ImprovementItem({ improvement }: { improvement: Improvement }) {
   return (
-    <div className="w-full rounded-lg border border-border-muted bg-surface-muted p-4.25">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold text-ink">{improvement.title}</h3>
-        <SeverityBadge severity={improvement.severity} />
-      </div>
+    <SeverityCardItem title={improvement.title} severity={improvement.severity}>
       <div className="flex flex-col gap-1 text-xs leading-4">
         <p>
           <span className="font-medium text-ink">Reason:</span>{" "}
@@ -20,7 +16,7 @@ function ImprovementItem({ improvement }: { improvement: Improvement }) {
           <span className="text-muted">{improvement.how}</span>
         </p>
       </div>
-    </div>
+    </SeverityCardItem>
   );
 }
 

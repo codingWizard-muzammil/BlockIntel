@@ -1,23 +1,17 @@
 import { ArrowRight, ShieldAlert } from "lucide-react";
 import { Card, CardHeading } from "@/components/ui/Card";
-import { SeverityBadge } from "@/components/ui/SeverityBadge";
+import { SeverityCardItem } from "@/components/ui/SeverityCardItem";
 import { Button } from "@/components/ui/Button";
 import type { AttackScenario } from "@/types/analysis";
 
 function AttackItem({ attack, index }: { attack: AttackScenario; index: number }) {
   return (
-    <div className="w-full rounded-lg border border-border-muted bg-surface-muted p-4.25">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold text-ink">
-          {index}. {attack.title}
-        </h3>
-        <SeverityBadge severity={attack.severity} />
-      </div>
+    <SeverityCardItem title={`${index}. ${attack.title}`} severity={attack.severity}>
       <p className="mb-3 text-xs leading-4 text-muted">{attack.description}</p>
       <Button variant="ghost" size="sm">
         Simulate Attack
       </Button>
-    </div>
+    </SeverityCardItem>
   );
 }
 
