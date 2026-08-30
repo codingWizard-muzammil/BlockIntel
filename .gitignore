@@ -43,3 +43,6 @@ next-env.d.ts
 
 # prisma
 generated/
+
+# uploaded/generated contract source files
+/contracts/
