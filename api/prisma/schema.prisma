@@ -21,24 +21,27 @@ model Users {
 }
 
 model projects {
-  id           String      @id @default(uuid())
+  id           String   @id @default(uuid())
   name         String
+  description  String?
+  chain        String
+  purpose      String
   ownerAddress String
-  createdAt    DateTime    @default(now())
+  createdAt    DateTime @default(now())
 
-  owner        Users       @relation(fields: [ownerAddress], references: [walletAddress])
-  contracts    contracts[]
+  owner     Users       @relation(fields: [ownerAddress], references: [walletAddress])
+  contracts contracts[]
 
   @@map("projects")
 }
 
 model contracts {
-  address      String   @unique
-  name         String   @db.VarChar(150)
+  address      String @unique
+  name         String @db.VarChar(150)
   projectId    String
   ownerAddress String
 
-  project      projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("contracts")
 }
