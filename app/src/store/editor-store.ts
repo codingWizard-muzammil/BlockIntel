@@ -12,31 +12,31 @@ type CompileStatus = {
 
 // Chains with a running node under chains/ — keep in sync with that folder.
 export const CHAINS = [
-  { name: "Ethereum", symbol: "ETH" },
-  { name: "Polygon", symbol: "POL" },
-  { name: "BNB Chain", symbol: "BNB" },
-  { name: "Arbitrum", symbol: "ARB" },
-  { name: "Optimism", symbol: "OP" },
-  { name: "Avalanche", symbol: "AVAX" },
-  { name: "Solana", symbol: "SOL" },
+  { name: "ethereum", symbol: "ETH" },
+  { name: "polygon", symbol: "POL" },
+  { name: "bnb chain", symbol: "BNB" },
+  { name: "arbitrum", symbol: "ARB" },
+  { name: "optimism", symbol: "OP" },
+  { name: "avalanche", symbol: "AVAX" },
+  { name: "solana", symbol: "SOL" },
 ];
 
 // Languages each chain's toolchain supports.
 export const CHAIN_LANGUAGES: Record<string, string[]> = {
-  Ethereum: ["Solidity", "Vyper"],
-  Polygon: ["Solidity"],
-  "BNB Chain": ["Solidity"],
-  Arbitrum: ["Solidity"],
-  Optimism: ["Solidity"],
-  Avalanche: ["Solidity"],
-  Solana: ["Rust"],
+  ethereum: ["solidity", "vyper"],
+  polygon: ["solidity"],
+  "bnb chain": ["solidity"],
+  arbitrum: ["solidity"],
+  optimism: ["solidity"],
+  avalanche: ["solidity"],
+  solana: ["rust"],
 };
 
 export const EXTENSION_BY_LANGUAGE: Record<string, extensions> = {
-  Solidity: "sol",
-  Vyper: "vyper",
-  Rust: "rs",
-  Move: "move",
+  solidity: "sol",
+  vyper: "vyper",
+  rust: "rs",
+  move: "move",
 };
 
 // Union of every language a supported chain can compile.

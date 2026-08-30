@@ -35,13 +35,13 @@ function AvalancheIcon(props: SVGProps<SVGSVGElement>) {
 }
 
 export const CHAIN_ICONS: Record<string, IconType | ComponentType<SVGProps<SVGSVGElement>>> = {
-  Ethereum: SiEthereum,
-  Polygon: SiPolygon,
-  "BNB Chain": SiBnbchain,
-  Arbitrum: ArbitrumIcon,
-  Optimism: SiOptimism,
-  Avalanche: AvalancheIcon,
-  Solana: SiSolana,
+  ethereum: SiEthereum,
+  polygon: SiPolygon,
+  "bnb chain": SiBnbchain,
+  arbitrum: ArbitrumIcon,
+  optimism: SiOptimism,
+  avalanche: AvalancheIcon,
+  solana: SiSolana,
 };
 
 export function ChainIcon({
