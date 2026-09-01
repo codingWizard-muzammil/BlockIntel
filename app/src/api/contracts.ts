@@ -27,3 +27,15 @@ export async function deleteContractRequest(id: string) {
   await apiClient.delete(`/contracts/${id}`);
   return id;
 }
+
+export async function updateContractRequest(id: string, source: string) {
+  const { data } = await apiClient.patch<{ contract: ApiContract }>(`/contracts/${id}`, {
+    source,
+  });
+  return data.contract;
+}
+
+export async function fetchContractSourceRequest(id: string) {
+  const { data } = await apiClient.get<{ source: string }>(`/contracts/${id}/source`);
+  return data.source;
+}
