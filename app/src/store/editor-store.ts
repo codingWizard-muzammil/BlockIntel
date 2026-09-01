@@ -162,6 +162,7 @@ type EditorState = {
   setLockedChain: (chain: string | null) => void;
   setPanelWidth: (width: number) => void;
   setSource: (source: string) => void;
+  hydrateFileSource: (fileId: string, source: string) => void;
   clearSource: () => void;
   formatSource: () => void;
 };
@@ -358,6 +359,15 @@ export const useEditorStore = create<EditorState>((set) => ({
       files: state.files.map((f) =>
         f.id === state.activeFileId ? { ...f, source } : f,
       ),
+    })),
+
+  // Writes server-fetched content into a file that was hydrated with
+  // `source: ""` (see setFilesFromContracts) — distinct from setSource so
+  // it's clearly not a user edit and won't trigger autosave.
+  hydrateFileSource: (fileId, source) =>
+    set((state) => ({
+      source: fileId === state.activeFileId ? source : state.source,
+      files: state.files.map((f) => (f.id === fileId ? { ...f, source } : f)),
     })),
 
   clearSource: () =>
