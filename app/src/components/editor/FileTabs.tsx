@@ -133,7 +133,10 @@ function FileTab({
     if (trimmed) {
       const finalName = trimmed + extension;
       setFileName(finalName);
-      if (autoEdit) onCreate(file, finalName);
+      // Create the contract the first time any unsaved file is named —
+      // not just ones opened via the "+" button (autoEdit), otherwise the
+      // project's initial default file can never be persisted.
+      if (!file.contractId) onCreate(file, finalName);
     }
     stopEditing();
   }
