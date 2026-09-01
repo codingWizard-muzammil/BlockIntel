@@ -1,7 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import Editor, { type BeforeMount } from "@monaco-editor/react";
 import { useEditorStore } from "@/store/editor-store";
+import { useProjectStore } from "@/store/project-store";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+
+const AUTOSAVE_DELAY_MS = 1200;
 
 const MONACO_LANGUAGE_ID: Record<string, string> = {
   Solidity: "solidity",
@@ -287,6 +292,22 @@ export function CodeEditor() {
   const source = useEditorStore((s) => s.source);
   const setSource = useEditorStore((s) => s.setSource);
   const language = useEditorStore((s) => s.language);
+  const activeFileId = useEditorStore((s) => s.activeFileId);
+  const updateContract = useProjectStore((s) => s.updateContract);
+
+  const [debouncedSave, flushSave] = useDebouncedCallback(
+    (contractId: string, value: string) => updateContract(contractId, value),
+    AUTOSAVE_DELAY_MS,
+  );
+
+  // Flush rather than drop a pending save when the user switches to another
+  // file/tab (or leaves this view entirely, which unmounts CodeEditor) —
+  // the debounce timer alone would otherwise silently lose that last edit.
+  useEffect(() => {
+    return () => {
+      flushSave();
+    };
+  }, [activeFileId, flushSave]);
 
   return (
     <Editor
@@ -294,7 +315,18 @@ export function CodeEditor() {
       value={source}
       theme="blockintel-dark"
       beforeMount={beforeMount}
-      onChange={(value) => setSource(value ?? "")}
+      onChange={(value) => {
+        const next = value ?? "";
+        setSource(next);
+        // Read fresh state rather than a closed-over selector — this only
+        // fires on genuine user edits (Monaco doesn't re-fire onChange for
+        // programmatic `value` prop updates), so it's safe to autosave here.
+        const state = useEditorStore.getState();
+        const activeFile = state.files.find((f) => f.id === state.activeFileId);
+        if (activeFile?.contractId) {
+          debouncedSave(activeFile.contractId, next);
+        }
+      }}
       loading={
         <div className="flex size-full items-center justify-center bg-canvas text-xs text-muted">
           Loading editor…
