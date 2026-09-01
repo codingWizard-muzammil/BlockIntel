@@ -92,6 +92,7 @@ function FileTab({
   const setFileName = useEditorStore((s) => s.setFileName);
   const setFileLanguage = useEditorStore((s) => s.setFileLanguage);
   const fileCount = useEditorStore((s) => s.files.length);
+  const updateContractMeta = useProjectStore((s) => s.updateContractMeta);
 
   const isActive = file.id === activeFileId;
   const multiLanguage = languages.length > 1;
@@ -132,11 +133,16 @@ function FileTab({
     const trimmed = draftName.trim();
     if (trimmed) {
       const finalName = trimmed + extension;
+      const renamed = finalName !== file.name;
       setFileName(finalName);
       // Create the contract the first time any unsaved file is named —
       // not just ones opened via the "+" button (autoEdit), otherwise the
       // project's initial default file can never be persisted.
-      if (!file.contractId) onCreate(file, finalName);
+      if (!file.contractId) {
+        onCreate(file, finalName);
+      } else if (renamed) {
+        updateContractMeta(file.id, file.contractId, { name: finalName });
+      }
     }
     stopEditing();
   }
@@ -201,6 +207,15 @@ function FileTab({
               menuRef={menuRef}
               onSelect={(lang) => {
                 setFileLanguage(file.id, lang);
+                if (file.contractId && lang !== file.language) {
+                  const renamed = useEditorStore
+                    .getState()
+                    .files.find((f) => f.id === file.id);
+                  updateContractMeta(file.id, file.contractId, {
+                    language: lang,
+                    name: renamed?.name,
+                  });
+                }
                 setLanguageMenuOpen(false);
               }}
             />
@@ -226,7 +241,7 @@ function FileTab({
           <X className="size-3" />
         </button>
       ) : (
-        <span className="size-2 rounded-full bg-warning" />
+        ""
       )}
     </div>
   );
