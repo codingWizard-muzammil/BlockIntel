@@ -1,6 +1,7 @@
 "use client";
 
 import { CHAINS, useEditorStore } from "@/store/editor-store";
+import { useProjectStore } from "@/store/project-store";
 import { ChainIcon } from "@/components/editor/chain-icons";
 import { ProjectSwitcher } from "@/components/editor/ProjectSwitcher";
 
@@ -20,6 +21,22 @@ function ChainBadge({
       }`}
     >
       <ChainIcon chain={chain} className="size-3" />
+    </span>
+  );
+}
+
+function AutosaveIndicator() {
+  const status = useProjectStore((s) => s.autosaveStatus);
+
+  if (status === "idle") return null;
+
+  return (
+    <span
+      className={`ml-auto text-xs ${status === "error" ? "text-danger" : "text-muted"}`}
+    >
+      {status === "saving" && "Saving…"}
+      {status === "saved" && "Saved"}
+      {status === "error" && "Save failed"}
     </span>
   );
 }
@@ -45,6 +62,8 @@ export function EditorToolbar() {
         <ChainBadge chain={activeChain.name} />
         {activeChain.name}
       </span>
+
+      <AutosaveIndicator />
     </div>
   );
 }
