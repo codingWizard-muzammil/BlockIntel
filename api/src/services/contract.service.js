@@ -40,16 +40,36 @@ const createContract = async ({ projectId, name, language, source, ownerAddress 
   return { status: 201, json: { contract } };
 };
 
-const updateContract = async ({ id, ownerAddress, source }) => {
+const updateContract = async ({ id, ownerAddress, name, language, source }) => {
   const contract = await contractModel.findOne({ id });
 
   if (!contract || contract.ownerAddress !== ownerAddress) {
     return { status: 404, json: { message: "Contract not found" } };
   }
 
-  await fs.writeFile(contract.source, source ?? "", "utf8");
+  const data = {};
+  if (name !== undefined) data.name = name;
 
-  return { status: 200, json: { contract } };
+  let sourcePath = contract.source;
+  if (language !== undefined && language !== contract.language) {
+    const extension = LANGUAGE_EXTENSIONS[language.toLowerCase()];
+    const newPath = `${sourcePath.slice(0, sourcePath.lastIndexOf("."))}.${extension}`;
+    await fs.rename(sourcePath, newPath);
+    sourcePath = newPath;
+    data.language = language;
+    data.source = newPath;
+  }
+
+  if (Object.keys(data).length > 0) {
+    await contractModel.update({ id }, data);
+  }
+
+  if (source !== undefined) {
+    await fs.writeFile(sourcePath, source, "utf8");
+  }
+
+  const updated = await contractModel.findOne({ id });
+  return { status: 200, json: { contract: updated } };
 };
 
 const getContractSource = async ({ id, ownerAddress }) => {

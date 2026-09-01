@@ -17,12 +17,14 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
   const { id } = req.params;
-  const { source } = req.body;
+  const { name, language, source } = req.body;
   const { address } = req.user;
 
   const { json, status } = await contract.updateContract({
     id,
     ownerAddress: address,
+    name,
+    language,
     source,
   });
 
