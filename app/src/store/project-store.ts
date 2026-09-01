@@ -14,6 +14,8 @@ import {
 import {
   createContractRequest,
   deleteContractRequest,
+  fetchContractSourceRequest,
+  updateContractRequest,
   type CreateContractInput,
 } from "@/api/contracts";
 import { useEditorStore } from "./editor-store";
@@ -21,8 +23,14 @@ import { useEditorStore } from "./editor-store";
 export type { ApiProject };
 
 type RequestStatus = "idle" | "loading" | "success" | "error";
+type AutosaveStatus = "idle" | "saving" | "saved" | "error";
 
 const STORAGE_KEY = "blockintel-active-project";
+
+// Last content known to be persisted per contract, so autosave can skip a
+// PATCH when nothing actually changed. Intentionally outside the store —
+// it's a write cache, not UI state, and shouldn't trigger re-renders.
+const lastSavedSourceByContract = new Map<string, string>();
 
 type ProjectState = {
   activeProjectId: string | null;
@@ -39,6 +47,7 @@ type ProjectState = {
   deleteError: string | null;
   deleteContractStatus: RequestStatus;
   deleteContractError: string | null;
+  autosaveStatus: AutosaveStatus;
 
   restore: () => void;
   setActiveProjectId: (id: string | null) => void;
@@ -50,6 +59,8 @@ type ProjectState = {
   createProject: (input: CreateProjectInput) => Promise<ApiProject | null>;
   deleteProject: (id: string) => Promise<boolean>;
   saveContract: (fileId: string, input: CreateContractInput) => void;
+  updateContract: (contractId: string, source: string) => void;
+  fetchContractSource: (contractId: string) => Promise<string | null>;
   deleteContract: (contractId: string, projectId: string) => Promise<boolean>;
 };
 
@@ -85,6 +96,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   deleteError: null,
   deleteContractStatus: "idle",
   deleteContractError: null,
+  autosaveStatus: "idle",
 
   restore: () => {
     if (get().hydrated) return;
@@ -168,12 +180,46 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   saveContract: (fileId, input) => {
     createContractRequest(input)
       .then((contract) => {
+        lastSavedSourceByContract.set(contract.id, input.source ?? "");
         useEditorStore.getState().setFileContract(fileId, contract);
         queryClient.invalidateQueries({ queryKey: ["projects", input.projectId] });
       })
       .catch((error) => {
         console.error("Failed to save contract in the background", error);
       });
+  },
+
+  // Fire-and-forget: called (debounced) on every edit to an already-saved
+  // file. Only tracks status for the small "Saving…/Saved" indicator.
+  updateContract: (contractId, source) => {
+    if (lastSavedSourceByContract.get(contractId) === source) {
+      set({ autosaveStatus: "saved" });
+      return;
+    }
+    set({ autosaveStatus: "saving" });
+    updateContractRequest(contractId, source)
+      .then(() => {
+        lastSavedSourceByContract.set(contractId, source);
+        set({ autosaveStatus: "saved" });
+      })
+      .catch((error) => {
+        console.error("Failed to autosave contract", error);
+        set({ autosaveStatus: "error" });
+      });
+  },
+
+  fetchContractSource: async (contractId) => {
+    try {
+      const source = await queryClient.fetchQuery({
+        queryKey: ["contracts", contractId, "source"],
+        queryFn: () => fetchContractSourceRequest(contractId),
+      });
+      lastSavedSourceByContract.set(contractId, source);
+      return source;
+    } catch (error) {
+      console.error("Failed to fetch contract source", error);
+      return null;
+    }
   },
 
   deleteContract: async (contractId, projectId) => {
