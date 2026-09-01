@@ -8,12 +8,6 @@ import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 const AUTOSAVE_DELAY_MS = 1200;
 
-const MONACO_LANGUAGE_ID: Record<string, string> = {
-  Solidity: "solidity",
-  Vyper: "vyper",
-  Rust: "rust",
-  Move: "move",
-};
 
 const SOLIDITY_KEYWORDS = [
   "pragma",
@@ -249,10 +243,17 @@ function registerCLikeLanguage(
 
 const beforeMount: BeforeMount = (monaco) => {
   const languages = monaco.languages.getLanguages();
+  console.log("🧙 ~ beforeMount ~ languages:", languages);
   const registered = new Set(languages.map((lang: { id: string }) => lang.id));
+  console.log("🧙 ~ beforeMount ~ registered:", registered);
 
   if (!registered.has("solidity")) {
-    registerCLikeLanguage(monaco, "solidity", SOLIDITY_KEYWORDS, SOLIDITY_TYPES);
+    registerCLikeLanguage(
+      monaco,
+      "solidity",
+      SOLIDITY_KEYWORDS,
+      SOLIDITY_TYPES,
+    );
   }
   if (!registered.has("vyper")) {
     registerCLikeLanguage(monaco, "vyper", VYPER_KEYWORDS, VYPER_TYPES);
@@ -289,10 +290,7 @@ const beforeMount: BeforeMount = (monaco) => {
 };
 
 export function CodeEditor() {
-  const source = useEditorStore((s) => s.source);
-  const setSource = useEditorStore((s) => s.setSource);
-  const language = useEditorStore((s) => s.language);
-  const activeFileId = useEditorStore((s) => s.activeFileId);
+  const { source, setSource, language, activeFileId } = useEditorStore();
   const updateContract = useProjectStore((s) => s.updateContract);
 
   const [debouncedSave, flushSave] = useDebouncedCallback(
@@ -311,7 +309,7 @@ export function CodeEditor() {
 
   return (
     <Editor
-      language={MONACO_LANGUAGE_ID[language] ?? "plaintext"}
+      language={language ?? "plaintext"}
       value={source}
       theme="blockintel-dark"
       beforeMount={beforeMount}
