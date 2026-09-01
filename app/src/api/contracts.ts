@@ -35,6 +35,22 @@ export async function updateContractRequest(id: string, source: string) {
   return data.contract;
 }
 
+export type UpdateContractMetaInput = {
+  name?: string;
+  language?: string;
+};
+
+export async function updateContractMetaRequest(
+  id: string,
+  input: UpdateContractMetaInput,
+) {
+  const { data } = await apiClient.patch<{ contract: ApiContract }>(
+    `/contracts/${id}`,
+    input,
+  );
+  return data.contract;
+}
+
 export async function fetchContractSourceRequest(id: string) {
   const { data } = await apiClient.get<{ source: string }>(`/contracts/${id}/source`);
   return data.source;

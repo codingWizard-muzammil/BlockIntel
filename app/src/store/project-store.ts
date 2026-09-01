@@ -16,7 +16,9 @@ import {
   deleteContractRequest,
   fetchContractSourceRequest,
   updateContractRequest,
+  updateContractMetaRequest,
   type CreateContractInput,
+  type UpdateContractMetaInput,
 } from "@/api/contracts";
 import { useEditorStore } from "./editor-store";
 
@@ -60,6 +62,11 @@ type ProjectState = {
   deleteProject: (id: string) => Promise<boolean>;
   saveContract: (fileId: string, input: CreateContractInput) => void;
   updateContract: (contractId: string, source: string) => void;
+  updateContractMeta: (
+    fileId: string,
+    contractId: string,
+    input: UpdateContractMetaInput,
+  ) => void;
   fetchContractSource: (contractId: string) => Promise<string | null>;
   deleteContract: (contractId: string, projectId: string) => Promise<boolean>;
 };
@@ -205,6 +212,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       .catch((error) => {
         console.error("Failed to autosave contract", error);
         set({ autosaveStatus: "error" });
+      });
+  },
+
+  // Fire-and-forget: persists a rename or language change for an
+  // already-saved contract.
+  updateContractMeta: (fileId, contractId, input) => {
+    updateContractMetaRequest(contractId, input)
+      .then((contract) => {
+        useEditorStore.getState().setFileContract(fileId, contract);
+        queryClient.invalidateQueries({ queryKey: ["projects", contract.projectId] });
+      })
+      .catch((error) => {
+        console.error("Failed to update contract in the background", error);
       });
   },
 
