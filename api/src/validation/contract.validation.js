@@ -14,4 +14,8 @@ const remove = joi.object({
   id: joi.string().uuid().required(),
 });
 
-module.exports = { create, remove };
+const update = joi.object({
+  source: joi.string().allow("").required(),
+});
+
+module.exports = { create, remove, update };

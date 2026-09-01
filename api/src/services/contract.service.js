@@ -40,6 +40,37 @@ const createContract = async ({ projectId, name, language, source, ownerAddress 
   return { status: 201, json: { contract } };
 };
 
+const updateContract = async ({ id, ownerAddress, source }) => {
+  const contract = await contractModel.findOne({ id });
+
+  if (!contract || contract.ownerAddress !== ownerAddress) {
+    return { status: 404, json: { message: "Contract not found" } };
+  }
+
+  await fs.writeFile(contract.source, source ?? "", "utf8");
+
+  return { status: 200, json: { contract } };
+};
+
+const getContractSource = async ({ id, ownerAddress }) => {
+  const contract = await contractModel.findOne({ id });
+
+  if (!contract || contract.ownerAddress !== ownerAddress) {
+    return { status: 404, json: { message: "Contract not found" } };
+  }
+
+  try {
+    const source = await fs.readFile(contract.source, "utf8");
+    return { status: 200, json: { source } };
+  } catch (error) {
+    logger.error("Failed to read contract file from disk", {
+      error: error.message,
+      path: contract.source,
+    });
+    return { status: 404, json: { message: "Contract file not found" } };
+  }
+};
+
 const deleteContract = async ({ id, ownerAddress }) => {
   const contract = await contractModel.findOne({ id });
 
@@ -61,4 +92,4 @@ const deleteContract = async ({ id, ownerAddress }) => {
   return { status: 200, json: { message: "Contract deleted" } };
 };
 
-module.exports = { createContract, deleteContract };
+module.exports = { createContract, updateContract, getContractSource, deleteContract };

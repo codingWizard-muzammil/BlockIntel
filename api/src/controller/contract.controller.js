@@ -15,6 +15,29 @@ const create = async (req, res) => {
   res.status(status).json(json);
 };
 
+const update = async (req, res) => {
+  const { id } = req.params;
+  const { source } = req.body;
+  const { address } = req.user;
+
+  const { json, status } = await contract.updateContract({
+    id,
+    ownerAddress: address,
+    source,
+  });
+
+  res.status(status).json(json);
+};
+
+const getSource = async (req, res) => {
+  const { id } = req.params;
+  const { address } = req.user;
+
+  const { json, status } = await contract.getContractSource({ id, ownerAddress: address });
+
+  res.status(status).json(json);
+};
+
 const remove = async (req, res) => {
   const { id } = req.params;
   const { address } = req.user;
@@ -24,4 +47,4 @@ const remove = async (req, res) => {
   res.status(status).json(json);
 };
 
-module.exports = { create, remove };
+module.exports = { create, update, getSource, remove };
