@@ -6,7 +6,7 @@ const app = express();
 const multer = require("multer");
 
 app.use(morgan("dev"));
-app.use(cors({ origin: "*", methods: "POST,PUT,GET,DELETE", maxAge: 86400 }));
+app.use(cors({ origin: "*", methods: "POST,PUT,GET,DELETE,PATCH", maxAge: 86400 }));
 app.use(express.json());
 const uploader = multer({dest: "../contracts/"})
 
