@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { EditorPanel } from "@/components/editor/EditorPanel";
 import { AnalysisTabs } from "@/components/analyzer/AnalysisTabs";
 import { ProjectStateGate } from "@/components/analyzer/ProjectStateGate";
@@ -29,8 +29,17 @@ function ContractWorkspace({
   children: ReactNode;
 }) {
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
+  const fetchContractSource = useProjectStore((s) => s.fetchContractSource);
   const setLockedChain = useEditorStore((s) => s.setLockedChain);
   const setFilesFromContracts = useEditorStore((s) => s.setFilesFromContracts);
+  const hydrateFileSource = useEditorStore((s) => s.hydrateFileSource);
+  const activeContractId = useEditorStore(
+    (s) => s.files.find((f) => f.id === s.activeFileId)?.contractId ?? null,
+  );
+  const activeSourceEmpty = useEditorStore(
+    (s) => !s.files.find((f) => f.id === s.activeFileId)?.source,
+  );
+  const hydratedContractIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     setActiveProjectId(id);
@@ -50,6 +59,25 @@ function ContractWorkspace({
     setFilesFromContracts(project.contracts ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally re-run only when the project changes, not on every contracts refetch
   }, [project.id, setFilesFromContracts]);
+
+  // `contracts.source` (see setFilesFromContracts) never carries file
+  // content, so the active tab's content is lazily fetched here the first
+  // time it's viewed. Keyed off primitives, not `files`, so this doesn't
+  // re-run on every keystroke (the files array gets a new identity on
+  // every setSource call).
+  useEffect(() => {
+    if (!activeContractId || !activeSourceEmpty) return;
+    if (hydratedContractIds.current.has(activeContractId)) return;
+    hydratedContractIds.current.add(activeContractId);
+
+    fetchContractSource(activeContractId).then((source) => {
+      if (source == null) return;
+      const file = useEditorStore
+        .getState()
+        .files.find((f) => f.contractId === activeContractId);
+      if (file) hydrateFileSource(file.id, source);
+    });
+  }, [activeContractId, activeSourceEmpty, fetchContractSource, hydrateFileSource]);
 
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden">
