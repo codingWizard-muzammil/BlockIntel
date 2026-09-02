@@ -1,14 +1,31 @@
 import { create } from "zustand";
 import { formatSolidity } from "@/lib/format-solidity";
-import type { ApiContract } from "@/api/contracts";
+import type {
+  ApiContract,
+  AbiFragment,
+  CompileDiagnostic,
+  CompileResult,
+  DeploymentResult,
+} from "@/api/contracts";
 
 export type extensions = "sol" | "vyper" | "rs" | "move" | "";
 
 type CompileStatus = {
   solidityVersion: string;
   ok: boolean;
+  // True when the contract's language has no compiler wired up yet — lets
+  // views show a "not supported yet" state instead of an error state.
+  unsupported: boolean;
   gas: string;
   time: string;
+  // Id of the contract this result belongs to — lets views tell whether the
+  // active tab is the one that was actually compiled.
+  contractId: string | null;
+  contractName: string | null;
+  abi: AbiFragment[] | null;
+  errors: CompileDiagnostic[];
+  warnings: CompileDiagnostic[];
+  deployment: DeploymentResult | null;
 };
 
 // Chains with a running node under chains/ — keep in sync with that folder.
@@ -86,6 +103,11 @@ export function clampPanelWidth(width: number) {
 export type EditorFile = {
   id: string;
   contractId: string | null;
+  // True while this file's first save (POST /contracts) is in flight. Lets
+  // a rename/language-change committed before that request resolves queue
+  // as an update instead of firing a second, duplicate create — see
+  // `saveContract`/`updateContractMeta` in project-store.
+  contractSaving: boolean;
   name: string;
   source: string;
   extension: extensions;
@@ -134,6 +156,7 @@ function retargetFilesToLanguage(
 function emptyContractLinkage() {
   return {
     contractId: null,
+    contractSaving: false,
     address: null,
     projectId: null,
     ownerAddress: null,
@@ -151,6 +174,8 @@ type EditorState = {
   panelWidth: number;
   source: string;
   compileStatus: CompileStatus;
+  compiling: boolean;
+  compileError: string | null;
 
   addFile: () => string;
   setActiveFile: (id: string) => void;
@@ -158,6 +183,7 @@ type EditorState = {
   setFileName: (name: string) => void;
   setFileLanguage: (id: string, language: string) => void;
   setFileContract: (id: string, contract: ApiContract) => void;
+  setFileContractSaving: (id: string, saving: boolean) => void;
   setFilesFromContracts: (contracts: ApiContract[]) => void;
   setLockedChain: (chain: string | null) => void;
   setPanelWidth: (width: number) => void;
@@ -165,6 +191,23 @@ type EditorState = {
   hydrateFileSource: (fileId: string, source: string) => void;
   clearSource: () => void;
   formatSource: () => void;
+  setCompiling: () => void;
+  setCompileResult: (contractId: string, result: CompileResult) => void;
+  setCompileError: (message: string) => void;
+};
+
+const initialCompileStatus: CompileStatus = {
+  solidityVersion: "",
+  ok: false,
+  unsupported: false,
+  gas: "",
+  time: "",
+  contractId: null,
+  contractName: null,
+  abi: null,
+  errors: [],
+  warnings: [],
+  deployment: null,
 };
 
 const initialFileId = createFileId();
@@ -180,7 +223,9 @@ export const useEditorStore = create<EditorState>((set) => ({
   lockedChain: null,
   panelWidth: getDefaultWidth(),
   source: "",
-  compileStatus: { solidityVersion: "", ok: false, gas: "", time: "" },
+  compileStatus: initialCompileStatus,
+  compiling: false,
+  compileError: null,
 
   addFile: () => {
     const id = createFileId();
@@ -286,6 +331,7 @@ export const useEditorStore = create<EditorState>((set) => ({
           ? {
               ...f,
               contractId: contract.id,
+              contractSaving: false,
               address: contract.address,
               projectId: contract.projectId,
               ownerAddress: contract.ownerAddress,
@@ -293,6 +339,11 @@ export const useEditorStore = create<EditorState>((set) => ({
             }
           : f,
       ),
+    })),
+
+  setFileContractSaving: (id, saving) =>
+    set((state) => ({
+      files: state.files.map((f) => (f.id === id ? { ...f, contractSaving: saving } : f)),
     })),
 
   // Replaces the open tabs with one per contract already saved to this
@@ -306,6 +357,7 @@ export const useEditorStore = create<EditorState>((set) => ({
           ? contracts.map((c) => ({
               id: createFileId(),
               contractId: c.id,
+              contractSaving: false,
               name: c.name,
               source: "",
               extension: defaultExtension(c.language),
@@ -388,4 +440,32 @@ export const useEditorStore = create<EditorState>((set) => ({
         ),
       };
     }),
+
+  setCompiling: () => set({ compiling: true, compileError: null }),
+
+  setCompileResult: (contractId, result) =>
+    set({
+      compiling: false,
+      compileError: null,
+      compileStatus: {
+        solidityVersion: result.solidityVersion,
+        ok: result.ok,
+        unsupported: result.unsupported ?? false,
+        gas: result.gas ?? "",
+        time: result.time,
+        contractId,
+        contractName: result.contractName ?? null,
+        abi: result.abi ?? null,
+        errors: result.errors ?? [],
+        warnings: result.warnings ?? [],
+        deployment: result.deployment,
+      },
+    }),
+
+  setCompileError: (message) =>
+    set((state) => ({
+      compiling: false,
+      compileError: message,
+      compileStatus: { ...state.compileStatus, ok: false },
+    })),
 }));

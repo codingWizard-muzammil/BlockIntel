@@ -17,8 +17,13 @@ import {
   fetchContractSourceRequest,
   updateContractRequest,
   updateContractMetaRequest,
+  compileContractRequest,
+  callContractFunctionRequest,
+  type ApiContract,
   type CreateContractInput,
   type UpdateContractMetaInput,
+  type CallFunctionInput,
+  type CallFunctionResult,
 } from "@/api/contracts";
 import { useEditorStore } from "./editor-store";
 
@@ -33,6 +38,12 @@ const STORAGE_KEY = "blockintel-active-project";
 // PATCH when nothing actually changed. Intentionally outside the store —
 // it's a write cache, not UI state, and shouldn't trigger re-renders.
 const lastSavedSourceByContract = new Map<string, string>();
+
+// A file's first save (POST /contracts), keyed by local file id, while it's
+// in flight. If a rename/language-change commits before that request
+// resolves, `updateContractMeta` chains onto this instead of firing a
+// second create for the same file — see the comment on `saveContract`.
+const pendingContractCreation = new Map<string, Promise<ApiContract>>();
 
 type ProjectState = {
   activeProjectId: string | null;
@@ -64,11 +75,18 @@ type ProjectState = {
   updateContract: (contractId: string, source: string) => void;
   updateContractMeta: (
     fileId: string,
-    contractId: string,
+    // Null when the file's first save is still in flight — see
+    // `pendingContractCreation`.
+    contractId: string | null,
     input: UpdateContractMetaInput,
   ) => void;
   fetchContractSource: (contractId: string) => Promise<string | null>;
   deleteContract: (contractId: string, projectId: string) => Promise<boolean>;
+  compileContract: (contractId: string) => Promise<void>;
+  callContractFunction: (
+    contractId: string,
+    input: CallFunctionInput,
+  ) => Promise<CallFunctionResult>;
 };
 
 function readStored(): string | null {
@@ -183,17 +201,29 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   // Fire-and-forget: persists a newly created contract without any loading
-  // state for the UI to bind a spinner to.
+  // state for the UI to bind a spinner to. Tracks the request in
+  // `pendingContractCreation` so a rename/language-change committed before
+  // it resolves (see `updateContractMeta`) doesn't fire a duplicate create.
   saveContract: (fileId, input) => {
-    createContractRequest(input)
+    useEditorStore.getState().setFileContractSaving(fileId, true);
+    const request = createContractRequest(input)
       .then((contract) => {
         lastSavedSourceByContract.set(contract.id, input.source ?? "");
         useEditorStore.getState().setFileContract(fileId, contract);
         queryClient.invalidateQueries({ queryKey: ["projects", input.projectId] });
+        return contract;
       })
       .catch((error) => {
         console.error("Failed to save contract in the background", error);
+        useEditorStore.getState().setFileContractSaving(fileId, false);
+        throw error;
+      })
+      .finally(() => {
+        if (pendingContractCreation.get(fileId) === request) {
+          pendingContractCreation.delete(fileId);
+        }
       });
+    pendingContractCreation.set(fileId, request);
   },
 
   // Fire-and-forget: called (debounced) on every edit to an already-saved
@@ -216,16 +246,27 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   // Fire-and-forget: persists a rename or language change for an
-  // already-saved contract.
+  // already-saved contract. When `contractId` is null, the file's first
+  // save is still in flight (see `saveContract`) — wait for it and apply
+  // this as an update to that same contract instead of racing a second
+  // create for the same file.
   updateContractMeta: (fileId, contractId, input) => {
-    updateContractMetaRequest(contractId, input)
-      .then((contract) => {
+    const applyUpdate = (id: string) =>
+      updateContractMetaRequest(id, input).then((contract) => {
         useEditorStore.getState().setFileContract(fileId, contract);
         queryClient.invalidateQueries({ queryKey: ["projects", contract.projectId] });
-      })
-      .catch((error) => {
-        console.error("Failed to update contract in the background", error);
       });
+
+    const pendingCreate = contractId ? null : pendingContractCreation.get(fileId);
+    const run = contractId
+      ? applyUpdate(contractId)
+      : pendingCreate
+        ? pendingCreate.then((contract) => applyUpdate(contract.id))
+        : null;
+
+    run?.catch((error) => {
+      console.error("Failed to update contract in the background", error);
+    });
   },
 
   fetchContractSource: async (contractId) => {
@@ -257,6 +298,25 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       return false;
     }
   },
+
+  // Compiles the contract and — for chains with a local node configured —
+  // deploys it, then hands the result to editor-store so every gated view
+  // (Summary/Attacks/Improvements/Playground) can react to it.
+  compileContract: async (contractId) => {
+    useEditorStore.getState().setCompiling();
+    try {
+      const compile = await compileContractRequest(contractId);
+      useEditorStore.getState().setCompileResult(contractId, compile);
+      if (compile.deployment?.ok) {
+        const projectId = get().activeProjectId;
+        if (projectId) queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+      }
+    } catch (error) {
+      useEditorStore.getState().setCompileError((error as Error).message);
+    }
+  },
+
+  callContractFunction: (contractId, input) => callContractFunctionRequest(contractId, input),
 }));
 
 // Keep the project list in sync with auth: load it as soon as a wallet
