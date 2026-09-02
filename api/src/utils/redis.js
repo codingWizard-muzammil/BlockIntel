@@ -9,9 +9,11 @@ const CACHE_CONFIG = {
   defaultTTL: 60,
   keyPrefixes: {
     auth: "auth",
+    mint: "mint",
   },
   ttlByType: {
     auth: 180,
+    mint: 10,
   },
 };
 
