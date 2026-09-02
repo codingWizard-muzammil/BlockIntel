@@ -55,3 +55,70 @@ export async function fetchContractSourceRequest(id: string) {
   const { data } = await apiClient.get<{ source: string }>(`/contracts/${id}/source`);
   return data.source;
 }
+
+export type AbiInput = { name: string; type: string; internalType?: string };
+
+export type AbiFragment = {
+  type: "function" | "constructor" | "event" | "error" | "fallback" | "receive";
+  name?: string;
+  inputs: AbiInput[];
+  outputs?: AbiInput[];
+  stateMutability?: string;
+  // Only present on function fragments — `${name}(${type,type,...})`, used
+  // to identify the exact overload when calling it from the playground.
+  signature?: string;
+};
+
+export type CompileDiagnostic = { message: string; severity?: string; formattedMessage?: string };
+
+export type DeploymentResult = {
+  ok: boolean;
+  address: string | null;
+  chain: string;
+  rpcUrl: string | null;
+  error: string | null;
+};
+
+export type CompileResult = {
+  ok: boolean;
+  // Set when the contract's language has no compiler wired up yet (e.g.
+  // Vyper) — distinguishes "not implemented" from a real source error so
+  // the UI can show a friendlier state instead of an error trace.
+  unsupported?: boolean;
+  solidityVersion: string;
+  contractName?: string;
+  abi?: AbiFragment[];
+  bytecode?: string;
+  errors: CompileDiagnostic[];
+  warnings: CompileDiagnostic[];
+  time: string;
+  gas: string | null;
+  deployment: DeploymentResult | null;
+};
+
+export async function compileContractRequest(id: string) {
+  // The backend uses 422 (rather than throwing an error page) to report an
+  // unsupported language as a structured compile result — accept it here so
+  // axios doesn't reject and lose that payload.
+  const { data } = await apiClient.post<{ compile: CompileResult }>(`/contracts/${id}/compile`, undefined, {
+    validateStatus: (status) => status === 200 || status === 422,
+  });
+  return data.compile;
+}
+
+export type CallFunctionInput = {
+  functionName: string;
+  args?: unknown[];
+  valueWei?: string;
+};
+
+export type CallFunctionResult = {
+  result?: unknown;
+  txHash?: string;
+  gasUsed?: string;
+};
+
+export async function callContractFunctionRequest(id: string, input: CallFunctionInput) {
+  const { data } = await apiClient.post<CallFunctionResult>(`/contracts/${id}/call`, input);
+  return data;
+}
