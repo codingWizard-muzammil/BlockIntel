@@ -17,4 +17,17 @@ const LANGUAGE_EXTENSIONS = {
 
 const CHAINS = Object.keys(CHAIN_LANGUAGES);
 
-module.exports = { CHAIN_LANGUAGES, CHAINS, LANGUAGE_EXTENSIONS };
+// Ports match chains/docker-compose.yml — each is a local hardhat node
+// started with `docker compose up` from that folder. Override per-chain via
+// env (e.g. ETHEREUM_RPC_URL) when pointing at something other than the
+// bundled local nodes. Solana has no EVM-style RPC/deploy path here yet.
+const CHAIN_RPC_URLS = {
+  ethereum: process.env.ETHEREUM_RPC_URL || "http://127.0.0.1:8545",
+  "bnb chain": process.env.BNB_RPC_URL || "http://127.0.0.1:8546",
+  avalanche: process.env.AVALANCHE_RPC_URL || "http://127.0.0.1:8547",
+  polygon: process.env.POLYGON_RPC_URL || "http://127.0.0.1:8548",
+  arbitrum: process.env.ARBITRUM_RPC_URL || "http://127.0.0.1:8549",
+  optimism: process.env.OPTIMISM_RPC_URL || "http://127.0.0.1:8550",
+};
+
+module.exports = { CHAIN_LANGUAGES, CHAINS, LANGUAGE_EXTENSIONS, CHAIN_RPC_URLS };
