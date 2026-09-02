@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import Dropdown from "@/components/ui/Dropdown";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { ChainIcon } from "@/components/editor/chain-icons";
 import { CHAINS } from "@/store/editor-store";
 import { useProjectStore } from "@/store/project-store";

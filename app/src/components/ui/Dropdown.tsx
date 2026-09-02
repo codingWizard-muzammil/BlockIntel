@@ -2,7 +2,7 @@ import { useClickOutside } from "@/hooks/useClickOutside";
 import { ChevronDown } from "lucide-react";
 import { useRef, useState } from "react";
 
-function Dropdown<T>({
+export function Dropdown<T>({
   label,
   value,
   options,
@@ -85,4 +85,3 @@ function Dropdown<T>({
   );
 }
 
-export default Dropdown;

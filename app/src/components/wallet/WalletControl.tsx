@@ -14,7 +14,7 @@ interface WalletOption {
   onSelect: () => void;
 }
 
-function WalletControl() {
+export function WalletControl() {
   const router = useRouter();
   const { status, address, disconnect } = useAuthStore();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -87,4 +87,3 @@ function WalletControl() {
   );
 }
 
-export default WalletControl;

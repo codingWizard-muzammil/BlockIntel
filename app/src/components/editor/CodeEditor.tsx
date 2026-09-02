@@ -8,7 +8,6 @@ import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 const AUTOSAVE_DELAY_MS = 1200;
 
-
 const SOLIDITY_KEYWORDS = [
   "pragma",
   "solidity",
@@ -243,9 +242,7 @@ function registerCLikeLanguage(
 
 const beforeMount: BeforeMount = (monaco) => {
   const languages = monaco.languages.getLanguages();
-  console.log("🧙 ~ beforeMount ~ languages:", languages);
   const registered = new Set(languages.map((lang: { id: string }) => lang.id));
-  console.log("🧙 ~ beforeMount ~ registered:", registered);
 
   if (!registered.has("solidity")) {
     registerCLikeLanguage(

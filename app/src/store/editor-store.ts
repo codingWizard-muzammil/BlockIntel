@@ -8,7 +8,7 @@ import type {
   DeploymentResult,
 } from "@/api/contracts";
 
-export type extensions = "sol" | "vyper" | "rs" | "move" | "";
+export type Extension = "sol" | "vyper" | "rs" | "move" | "";
 
 type CompileStatus = {
   solidityVersion: string;
@@ -50,7 +50,7 @@ export const CHAIN_LANGUAGES: Record<string, string[]> = {
   solana: ["rust"],
 };
 
-export const EXTENSION_BY_LANGUAGE: Record<string, extensions> = {
+export const EXTENSION_BY_LANGUAGE: Record<string, Extension> = {
   solidity: "sol",
   vyper: "vyper",
   rust: "rs",
@@ -110,7 +110,7 @@ export type EditorFile = {
   contractSaving: boolean;
   name: string;
   source: string;
-  extension: extensions;
+  extension: Extension;
   language: string;
   address: string | null;
   projectId: string | null;
@@ -128,7 +128,7 @@ function defaultExtension(language: string) {
   return EXTENSION_BY_LANGUAGE[language] ?? "txt";
 }
 
-function renameFileExtension(fileName: string, extension: extensions) {
+function renameFileExtension(fileName: string, extension: Extension) {
   if (!fileName) return fileName;
   const dotIndex = fileName.lastIndexOf(".");
   const baseName = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;

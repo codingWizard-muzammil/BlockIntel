@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Check, FolderKanban, Plus } from "lucide-react";
 import { useProjectStore } from "@/store/project-store";
 import { CreateProjectModal } from "@/components/editor/CreateProjectModal";
-import Dropdown from "@/components/ui/Dropdown";
+import { Dropdown } from "@/components/ui/Dropdown";
 
 export function ProjectSwitcher() {
   const router = useRouter();

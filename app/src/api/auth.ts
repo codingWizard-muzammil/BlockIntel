@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import { MeResponse, NonceResponse, VerifyResponse } from "@/types/auth";
+import type { MeResponse, NonceResponse, VerifyResponse } from "@/types/auth";
 
 export async function fetchNonce(address: string, chain: string) {
   const { data } = await apiClient.get<NonceResponse>("/auth/nonce", {

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Moon } from "lucide-react";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 import { IconButton } from "@/components/ui/IconButton";
-import WalletControl from "../wallet/WalletControl";
+import { WalletControl } from "../wallet/WalletControl";
 
 export function Header() {
   return (
