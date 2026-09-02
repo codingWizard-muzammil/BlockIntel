@@ -137,8 +137,10 @@ function FileTab({
       setFileName(finalName);
       // Create the contract the first time any unsaved file is named —
       // not just ones opened via the "+" button (autoEdit), otherwise the
-      // project's initial default file can never be persisted.
-      if (!file.contractId) {
+      // project's initial default file can never be persisted. Once that
+      // first save is in flight (contractSaving), treat further renames as
+      // an update queued behind it rather than firing a second create.
+      if (!file.contractId && !file.contractSaving) {
         onCreate(file, finalName);
       } else if (renamed) {
         updateContractMeta(file.id, file.contractId, { name: finalName });
@@ -207,7 +209,7 @@ function FileTab({
               menuRef={menuRef}
               onSelect={(lang) => {
                 setFileLanguage(file.id, lang);
-                if (file.contractId && lang !== file.language) {
+                if ((file.contractId || file.contractSaving) && lang !== file.language) {
                   const renamed = useEditorStore
                     .getState()
                     .files.find((f) => f.id === file.id);
