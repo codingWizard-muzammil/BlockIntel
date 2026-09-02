@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { ChainIcon } from "@/components/editor/chain-icons";
 import { useEditorStore } from "@/store/editor-store";
 import { useProjectStore } from "@/store/project-store";
+import { usePlaygroundWalletBalance } from "@/hooks/usePlaygroundWalletBalance";
 import type { AbiFragment, DeploymentResult, PlaygroundWallet } from "@/api/contracts";
 
 function isReadOnly(fragment: AbiFragment) {
@@ -228,6 +229,12 @@ function PlaygroundBody({
       cancelled = true;
     };
   }, [contractId, deployed, fetchPlaygroundWallet]);
+
+  // Live balance push over WebSocket — catches changes from any source
+  // (an external wallet send, a faucet top-up), not just calls made here.
+  usePlaygroundWalletBalance(deployed ? contractId : null, (balance) =>
+    setWallet((w) => (w ? { ...w, balance } : w)),
+  );
 
   return (
     <div className="flex flex-col gap-6">
