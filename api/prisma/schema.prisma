@@ -36,14 +36,23 @@ model projects {
 }
 
 model contracts {
-  id           String   @id @default(uuid())
-  address      String?  @unique
-  name         String   @db.VarChar(150)
-  projectId    String
-  ownerAddress String
-  language     String
-  source       String   @default("") @db.Text
-  createdAt    DateTime @default(now())
+  id              String    @id @default(uuid())
+  address         String?   @unique
+  name            String    @db.VarChar(150)
+  projectId       String
+  ownerAddress    String
+  language        String
+  source          String    @default("") @db.Text
+  createdAt       DateTime  @default(now())
+
+  // Cached result of the last successful compile, so the ABI/bytecode can be
+  // reused (e.g. by the playground's call endpoint) without recompiling from
+  // source on every request.
+  abi             Json?
+  bytecode        String?   @db.Text
+  compilerVersion String?
+  gasEstimate     String?
+  compiledAt      DateTime?
 
   project projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
