@@ -21,6 +21,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useProjectStore } from "@/store/project-store";
 import { useWalletStore } from "@/store/wallet-store";
 import { addressToHue, truncateAddress } from "@/helpers/address";
+import { redirect } from "next/navigation";
 
 const SECTIONS = [
   { id: "wallet", label: "Test wallet", icon: Sparkles },
@@ -30,12 +31,22 @@ const SECTIONS = [
 type SectionId = (typeof SECTIONS)[number]["id"];
 
 export default function SettingsPage() {
-  const authStatus = useAuthStore((s) => s.status);
-  const authAddress = useAuthStore((s) => s.address);
-  const authChain = useAuthStore((s) => s.chain);
-  const projects = useProjectStore((s) => s.projects);
-  const { chain, wallet, status, error, minting, mintError, fetchWallet, mintWallet } =
-    useWalletStore();
+  const {
+    status: authStatus,
+    address: authAddress,
+    chain: authChain,
+  } = useAuthStore();
+  const { projects, fetchProjects } = useProjectStore();
+  const {
+    chain,
+    wallet,
+    status,
+    error,
+    minting,
+    mintError,
+    fetchWallet,
+    mintWallet,
+  } = useWalletStore();
   const [addressCopied, setAddressCopied] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionId>("wallet");
 
@@ -53,7 +64,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (authStatus === "connected" && authChain) fetchWallet(authChain);
-  }, [authStatus, authChain, fetchWallet]);
+    if (!projects) fetchProjects();
+  }, [authStatus, authChain, fetchWallet, fetchProjects]);
 
   if (authStatus !== "connected") {
     return (
@@ -102,7 +114,10 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start rounded-lg border border-border bg-surface-muted px-4 py-2.5 text-sm text-muted sm:self-auto">
+          <div
+            className="flex items-center gap-2 self-start rounded-lg border border-border bg-surface-muted px-4 py-2.5 text-sm text-muted sm:self-auto cursor-pointer"
+            onClick={() => redirect("/projects")}
+          >
             <FolderKanban className="size-4" />
             <span className="font-semibold text-ink">{projects.length}</span>
             project{projects.length === 1 ? "" : "s"}
@@ -110,7 +125,8 @@ export default function SettingsPage() {
         </div>
 
         <p className="border-t border-border pt-4 text-xs text-muted">
-          This is the wallet you signed in with — it owns your projects and contracts.
+          This is the wallet you signed in with — it owns your projects and
+          contracts.
         </p>
       </div>
 
@@ -144,8 +160,8 @@ export default function SettingsPage() {
 
               {authChain === "solana" ? (
                 <p className="text-sm text-muted">
-                  Test wallets aren&apos;t available for Solana yet — only EVM chains have a
-                  local deploy node wired up.
+                  Test wallets aren&apos;t available for Solana yet — only EVM
+                  chains have a local deploy node wired up.
                 </p>
               ) : status === "loading" && !wallet ? (
                 <div className="flex items-center gap-2 text-sm text-muted">
@@ -174,7 +190,9 @@ export default function SettingsPage() {
                       <div className="text-[10px] uppercase tracking-wide text-muted">
                         Balance
                       </div>
-                      <div className="font-mono text-lg text-ink">{wallet.balance} ETH</div>
+                      <div className="font-mono text-lg text-ink">
+                        {wallet.balance} ETH
+                      </div>
                     </div>
                     <Button
                       size="sm"
@@ -190,23 +208,28 @@ export default function SettingsPage() {
                       Mint +100 ETH
                     </Button>
                   </div>
-                  {mintError && <p className="text-xs text-danger">{mintError}</p>}
+                  {mintError && (
+                    <p className="text-xs text-danger">{mintError}</p>
+                  )}
 
                   <div>
                     <div className="mb-1 text-[10px] uppercase tracking-wide text-muted">
                       Address
                     </div>
-                    <p className="break-all font-mono text-xs text-ink">{wallet.address}</p>
+                    <p className="break-all font-mono text-xs text-ink">
+                      {wallet.address}
+                    </p>
                   </div>
 
                   <PrivateKeyRow privateKey={wallet.privateKey} />
 
                   <p className="text-xs text-muted">
-                    This wallet is deployer and signer for every contract you deploy or call in
-                    the Playground — it&apos;s derived from your connected wallet and only ever
-                    holds fake ETH on a local test node. Import the private key above into
-                    MetaMask or Phantom to interact with it directly; never send real funds to
-                    it.
+                    This wallet is deployer and signer for every contract you
+                    deploy or call in the Playground — it&apos;s derived from
+                    your connected wallet and only ever holds fake ETH on a
+                    local test node. Import the private key above into MetaMask
+                    or Phantom to interact with it directly; never send real
+                    funds to it.
                   </p>
                 </div>
               ) : null}
@@ -217,7 +240,8 @@ export default function SettingsPage() {
             <Card>
               <CardHeading icon={SettingsIcon}>Preferences</CardHeading>
               <p className="text-sm text-muted">
-                Preferences for chains, compilers, and AI model choice will live here.
+                Preferences for chains, compilers, and AI model choice will live
+                here.
               </p>
             </Card>
           )}
