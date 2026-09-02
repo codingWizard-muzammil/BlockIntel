@@ -22,4 +22,10 @@ const update = joi
   })
   .min(1);
 
-module.exports = { create, remove, update };
+const call = joi.object({
+  functionName: joi.string().trim().min(1).required(),
+  args: joi.array().items(joi.any()).default([]),
+  valueWei: joi.string().trim().optional(),
+});
+
+module.exports = { create, remove, update, call };

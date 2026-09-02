@@ -1,6 +1,6 @@
 const router = require("express").Router();
 const { contract: contractController } = require("../../controller");
-const { create, remove, update } = require("../../validation/contract.validation");
+const { create, remove, update, call } = require("../../validation/contract.validation");
 const validate = require("../../middleware/validate.middeware");
 const auth = require("../../middleware/auth.middleware");
 
@@ -12,5 +12,11 @@ router
 router
   .route("/:id/source")
   .get(auth, validate(remove, "params"), contractController.getSource);
+router
+  .route("/:id/compile")
+  .post(auth, validate(remove, "params"), contractController.compileAndDeploy);
+router
+  .route("/:id/call")
+  .post(auth, validate(remove, "params"), validate(call, "body"), contractController.callFunction);
 
 module.exports = router;

@@ -1,4 +1,4 @@
-const { contract } = require("../services");
+const { contract, compile } = require("../services");
 
 const create = async (req, res) => {
   const { projectId, name, language, source } = req.body;
@@ -49,4 +49,29 @@ const remove = async (req, res) => {
   res.status(status).json(json);
 };
 
-module.exports = { create, update, getSource, remove };
+const compileAndDeploy = async (req, res) => {
+  const { id } = req.params;
+  const { address } = req.user;
+
+  const { json, status } = await compile.compileAndDeploy({ id, ownerAddress: address });
+
+  res.status(status).json(json);
+};
+
+const callFunction = async (req, res) => {
+  const { id } = req.params;
+  const { address } = req.user;
+  const { functionName, args, valueWei } = req.body;
+
+  const { json, status } = await compile.callFunction({
+    id,
+    ownerAddress: address,
+    functionName,
+    args,
+    valueWei,
+  });
+
+  res.status(status).json(json);
+};
+
+module.exports = { create, update, getSource, remove, compileAndDeploy, callFunction };
