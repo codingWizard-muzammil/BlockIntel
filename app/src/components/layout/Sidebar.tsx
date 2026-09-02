@@ -13,7 +13,7 @@ const bottomItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const { activeProjectId, projects } = useProjectStore();
   const restore = useProjectStore((s) => s.restore);
 
   useEffect(() => {
@@ -22,7 +22,10 @@ export function Sidebar() {
 
   const topItems = [
     {
-      href: activeProjectId ? `/contract/${activeProjectId}/summary` : "/contract",
+      href:
+        activeProjectId && activeProjectId in projects.map((p)=> p.id)
+          ? `/contract/${activeProjectId}/summary`
+          : "/contract",
       icon: Code2,
       label: "Analyzer",
       match: "/contract",
@@ -40,7 +43,9 @@ export function Sidebar() {
             href={href}
             aria-label={label}
             className={`relative flex size-10 items-center justify-center rounded-lg transition-colors ${
-              active ? "bg-accent-soft text-accent" : "text-muted hover:text-ink"
+              active
+                ? "bg-accent-soft text-accent"
+                : "text-muted hover:text-ink"
             }`}
           >
             {active && (
