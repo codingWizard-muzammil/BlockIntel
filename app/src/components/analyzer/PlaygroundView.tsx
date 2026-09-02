@@ -2,24 +2,24 @@
 
 import { useEffect, useState } from "react";
 import {
-  Check,
   CircleAlert,
   CircleCheck,
-  Copy,
   Eye,
-  EyeOff,
   FlaskConical,
   Loader2,
   Pencil,
+  Sparkles,
   Wallet,
 } from "lucide-react";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ChainIcon } from "@/components/editor/chain-icons";
+import { PrivateKeyRow } from "@/components/wallet/PrivateKeyRow";
 import { useEditorStore } from "@/store/editor-store";
 import { useProjectStore } from "@/store/project-store";
 import { usePlaygroundWalletBalance } from "@/hooks/usePlaygroundWalletBalance";
+import { mintWalletRequest } from "@/api/wallet";
 import type { AbiFragment, DeploymentResult, PlaygroundWallet } from "@/api/contracts";
 
 function isReadOnly(fragment: AbiFragment) {
@@ -115,40 +115,6 @@ function FunctionCard({
   );
 }
 
-function PrivateKeyRow({ privateKey }: { privateKey: string }) {
-  const [revealed, setRevealed] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(privateKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard API unavailable (insecure context, permissions) — nothing
-      // to fall back to, so just leave the button unresponsive.
-    }
-  }
-
-  return (
-    <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
-      <span className="font-mono text-xs text-ink">
-        {revealed ? privateKey : "•".repeat(24)}
-      </span>
-      <div className="flex shrink-0 items-center gap-1">
-        <Button size="sm" variant="secondary" onClick={() => setRevealed((r) => !r)}>
-          {revealed ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
-          {revealed ? "Hide" : "Show"} key
-        </Button>
-        <Button size="sm" variant="secondary" onClick={handleCopy}>
-          {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-          {copied ? "Copied" : "Copy"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export function PlaygroundView() {
   const status = useEditorStore((s) => s.compileStatus);
   const activeContractId = useEditorStore(
@@ -212,7 +178,23 @@ function PlaygroundBody({
 }) {
   const fetchPlaygroundWallet = useProjectStore((s) => s.fetchPlaygroundWallet);
   const [wallet, setWallet] = useState<PlaygroundWallet | null>(null);
+  const [minting, setMinting] = useState(false);
+  const [mintError, setMintError] = useState<string | null>(null);
   const deployed = Boolean(deployment?.ok && deployment.address);
+
+  async function handleMint() {
+    if (!deployment?.chain) return;
+    setMinting(true);
+    setMintError(null);
+    try {
+      const result = await mintWalletRequest(deployment.chain);
+      setWallet((w) => (w ? { ...w, balance: result.balance } : w));
+    } catch (err) {
+      setMintError((err as Error).message);
+    } finally {
+      setMinting(false);
+    }
+  }
   const readFns = abi.filter((f) => f.type === "function" && isReadOnly(f));
   const writeFns = abi.filter((f) => f.type === "function" && !isReadOnly(f));
 
@@ -268,9 +250,22 @@ function PlaygroundBody({
             <>
               <div className="flex items-center justify-between gap-2 text-sm">
                 <span className="font-mono text-xs text-ink">{wallet.address}</span>
-                <span className="font-mono text-sm text-ink">{wallet.balance} ETH</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm text-ink">{wallet.balance} ETH</span>
+                  <Button size="sm" variant="secondary" disabled={minting} onClick={handleMint}>
+                    {minting ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="size-3" />
+                    )}
+                    Mint +100 ETH
+                  </Button>
+                </div>
               </div>
-              <PrivateKeyRow privateKey={wallet.privateKey} />
+              {mintError && <p className="mt-1 text-xs text-danger">{mintError}</p>}
+              <div className="mt-3">
+                <PrivateKeyRow privateKey={wallet.privateKey} />
+              </div>
             </>
           ) : (
             <p className="text-sm text-muted">Funding your wallet on the local node…</p>

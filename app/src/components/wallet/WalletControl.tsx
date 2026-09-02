@@ -43,7 +43,7 @@ export function WalletControl() {
           {truncateAddress(address)}
         </Button>
         {menuOpen && (
-          <div className="absolute right-0 top-[calc(100%+6px)] z-20 min-w-40 overflow-hidden rounded-lg border border-border bg-surface p-1 shadow-xl shadow-black/40">
+          <div className="absolute right-0 top-[calc(100%+6px)] z-20 min-w-48 overflow-hidden rounded-lg border border-border bg-surface p-1 shadow-xl shadow-black/40">
             {walletOptions.map((option, i) => (
               <button
                 key={i}
