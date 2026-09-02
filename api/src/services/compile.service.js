@@ -4,37 +4,11 @@ const { ethers } = require("ethers");
 const CorCrud = require("../utils/CorCrud");
 const logger = require("../utils/logger");
 const { CHAIN_RPC_URLS } = require("../constants/chains");
-const { derivePlaygroundWallet } = require("../utils/playgroundWallet");
+const { derivePlaygroundWallet, ensureFunded } = require("../utils/playgroundWallet");
+const walletService = require("./wallet.service");
 
 const contractModel = new CorCrud("contracts");
 const projectModel = new CorCrud("projects");
-
-// Hardhat's well-known local devnet account #0 — every `hardhat node`
-// instance in chains/ funds it automatically. Used only as a faucet to top
-// up each user's own playground wallet (see playgroundWallet.js), never as
-// the account that actually deploys or calls a contract. Only ever used
-// against the ephemeral local test chains started from chains/, never a
-// real network.
-const DEV_DEPLOYER_KEY =
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-
-const FUND_THRESHOLD_WEI = ethers.parseEther("1");
-const FUND_AMOUNT_WEI = ethers.parseEther("10");
-
-// Every user gets their own deterministic wallet per chain so contract
-// interactions carry their own identity as `msg.sender` — but a freshly
-// derived wallet starts at a zero balance, so top it up from the shared
-// devnet faucet whenever it runs low.
-async function getFundedPlaygroundWallet(ownerAddress, chain, provider) {
-  const wallet = derivePlaygroundWallet(ownerAddress, chain).connect(provider);
-  const balance = await provider.getBalance(wallet.address);
-  if (balance < FUND_THRESHOLD_WEI) {
-    const funder = new ethers.Wallet(DEV_DEPLOYER_KEY, provider);
-    const tx = await funder.sendTransaction({ to: wallet.address, value: FUND_AMOUNT_WEI });
-    await tx.wait();
-  }
-  return wallet;
-}
 
 function functionSignature(fragment) {
   return `${fragment.name}(${fragment.inputs.map((i) => i.type).join(",")})`;
@@ -114,7 +88,7 @@ async function deployToChain({ chain, ownerAddress, abi, bytecode }) {
 
   try {
     const provider = new ethers.JsonRpcProvider(rpcUrl);
-    const wallet = await getFundedPlaygroundWallet(ownerAddress, chain, provider);
+    const wallet = await ensureFunded(ownerAddress, chain, provider);
     const factory = new ethers.ContractFactory(abi, bytecode, wallet);
     const constructorInputs = abi.find((f) => f.type === "constructor")?.inputs ?? [];
     const args = constructorInputs.map((input) => defaultArgFor(input.type));
@@ -269,7 +243,7 @@ const callFunction = async ({ id, ownerAddress, functionName, args = [], valueWe
     // Every call runs as the connected user's own playground wallet, not a
     // shared devnet account — only a write needs it topped up with gas.
     const wallet = isWrite
-      ? await getFundedPlaygroundWallet(ownerAddress, project.chain, provider)
+      ? await ensureFunded(ownerAddress, project.chain, provider)
       : derivePlaygroundWallet(ownerAddress, project.chain).connect(provider);
     const instance = new ethers.Contract(contract.address, abi, wallet);
     const callArgs = fragment.inputs.map((input, i) => coerceArg(input.type, args[i]));
@@ -315,40 +289,7 @@ const getWallet = async ({ id, ownerAddress }) => {
   }
 
   const project = await projectModel.findOne({ id: contract.projectId });
-  const rpcUrl = CHAIN_RPC_URLS[project.chain];
-  if (!rpcUrl) {
-    return { status: 422, json: { message: `No local node configured for ${project.chain}` } };
-  }
-
-  try {
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
-    const wallet = await getFundedPlaygroundWallet(ownerAddress, project.chain, provider);
-    const balance = await provider.getBalance(wallet.address);
-    return {
-      status: 200,
-      json: {
-        address: wallet.address,
-        // Safe to hand back: it's derived from JWT_SECRET one-way (HMAC) and
-        // only ever holds devnet ETH on an ephemeral local node — this is
-        // what lets the user import it into MetaMask/Phantom themselves.
-        privateKey: wallet.privateKey,
-        balance: ethers.formatEther(balance),
-      },
-    };
-  } catch (error) {
-    logger.error("Failed to fetch playground wallet", { error: error.message, chain: project.chain });
-    const unreachable = /ECONNREFUSED|could not detect network|fetch failed|SERVER_ERROR/i.test(
-      error.message,
-    );
-    return {
-      status: 422,
-      json: {
-        message: unreachable
-          ? `Local ${project.chain} node isn't reachable at ${rpcUrl}. Start it with "docker compose up" from chains/.`
-          : (error.shortMessage ?? error.message),
-      },
-    };
-  }
+  return walletService.getWallet({ address: ownerAddress, chain: project.chain });
 };
 
 module.exports = { compileAndDeploy, callFunction, getWallet };
