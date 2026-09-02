@@ -5,10 +5,10 @@ const { buildSignMessage } = require("../utils/siwe");
 const { verifySignatureForChain } = require("../utils/verifySignature");
 const authTTL = CACHE_CONFIG.ttlByType.auth;
 const keyPrefix = CACHE_CONFIG.keyPrefixes.auth;
-const userModel = new CorCrud("Users");
+const userModel = new CorCrud("users");
 
 const createNonce = async ({ address, chain }) => {
-  const id = await crypto.randomUUID();
+  const id = crypto.randomUUID();
   const key = `${keyPrefix}:${id}`;
   const value = { address, chain };
   await set(key, value, authTTL);

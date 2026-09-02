@@ -6,6 +6,13 @@ const { CHAIN_LANGUAGES, LANGUAGE_EXTENSIONS } = require("../constants/chains");
 const projectModel = new CorCrud("projects");
 const contractModel = new CorCrud("contracts");
 
+// A chain's toolchain can support more than one language (e.g. Ethereum:
+// Solidity + Vyper) — the first entry in CHAIN_LANGUAGES is the default used
+// to seed a new project's first contract.
+function defaultLanguageForChain(chain) {
+  return CHAIN_LANGUAGES[chain.toLowerCase()][0];
+}
+
 const createProject = async ({
   name,
   description,
@@ -20,14 +27,11 @@ const createProject = async ({
     purpose,
     ownerAddress,
   });
-  const contractId = await crypto.randomUUID();
-  const language = CHAIN_LANGUAGES[chain.toLowerCase()];
-  const extension =
-    LANGUAGE_EXTENSIONS[
-      language.length > 1 ? language[0]?.toLowerCase() : language.toLowerCase()
-    ];
+  const contractId = crypto.randomUUID();
+  const language = defaultLanguageForChain(chain);
+  const extension = LANGUAGE_EXTENSIONS[language.toLowerCase()];
 
-  const pth = path.join(
+  const filePath = path.join(
     __dirname,
     "../../../contracts",
     ownerAddress,
@@ -35,16 +39,16 @@ const createProject = async ({
     `${contractId}.${extension}`,
   );
 
-  await fs.mkdir(path.dirname(pth), { recursive: true });
-  await fs.writeFile(pth, "", "utf8");
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, "", "utf8");
 
   await contractModel.create({
     id: contractId,
     name: `untitled.${extension}`,
     projectId: project.id,
     ownerAddress,
-    language: language.length > 1 ? language[0] : language,
-    source: pth,
+    language,
+    source: filePath,
   });
 
   return { status: 201, json: { project } };

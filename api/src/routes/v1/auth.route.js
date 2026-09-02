@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const { auth: authController } = require("../../controller");
 const { nonce, verify } = require("../../validation/auth.validation");
-const validate = require("../../middleware/validate.middeware");
+const validate = require("../../middleware/validate.middleware");
 const auth = require("../../middleware/auth.middleware");
 
 router.route("/nonce").get(validate(nonce, "query"), authController.nonce);

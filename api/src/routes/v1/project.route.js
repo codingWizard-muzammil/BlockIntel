@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const { project: projectController } = require("../../controller");
 const { create, remove } = require("../../validation/project.validation");
-const validate = require("../../middleware/validate.middeware");
+const validate = require("../../middleware/validate.middleware");
 const auth = require("../../middleware/auth.middleware");
 
 router.route("/").get(auth, projectController.list);

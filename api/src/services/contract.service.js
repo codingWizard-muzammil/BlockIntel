@@ -17,7 +17,7 @@ const createContract = async ({ projectId, name, language, source, ownerAddress 
   const contractId = crypto.randomUUID();
   const extension = LANGUAGE_EXTENSIONS[language.toLowerCase()];
 
-  const pth = path.join(
+  const filePath = path.join(
     __dirname,
     "../../../contracts",
     ownerAddress,
@@ -25,8 +25,8 @@ const createContract = async ({ projectId, name, language, source, ownerAddress 
     `${contractId}.${extension}`,
   );
 
-  await fs.mkdir(path.dirname(pth), { recursive: true });
-  await fs.writeFile(pth, source ?? "", "utf8");
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, source ?? "", "utf8");
 
   const contract = await contractModel.create({
     id: contractId,
@@ -34,7 +34,7 @@ const createContract = async ({ projectId, name, language, source, ownerAddress 
     name,
     language,
     ownerAddress,
-    source: pth,
+    source: filePath,
   });
 
   return { status: 201, json: { contract } };

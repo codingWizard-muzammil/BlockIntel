@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const { contract: contractController } = require("../../controller");
 const { create, remove, update, call } = require("../../validation/contract.validation");
-const validate = require("../../middleware/validate.middeware");
+const validate = require("../../middleware/validate.middleware");
 const auth = require("../../middleware/auth.middleware");
 
 router.route("/").post(auth, validate(create, "body"), contractController.create);
