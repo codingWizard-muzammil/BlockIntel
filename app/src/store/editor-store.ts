@@ -116,6 +116,15 @@ export type EditorFile = {
   projectId: string | null;
   ownerAddress: string | null;
   createdAt: string | null;
+  // Cached result of this file's last successful compile (from the DB on
+  // load, or written by setCompileResult after an in-session compile) — lets
+  // a tab that's already been compiled show its playground/summary/etc.
+  // immediately, without forcing a recompile just because the tab wasn't
+  // active when the result came in.
+  abi: AbiFragment[] | null;
+  compilerVersion: string | null;
+  gasEstimate: string | null;
+  compiledAt: string | null;
 };
 
 function createFileId() {
@@ -161,6 +170,47 @@ function emptyContractLinkage() {
     projectId: null,
     ownerAddress: null,
     createdAt: null,
+    abi: null,
+    compilerVersion: null,
+    gasEstimate: null,
+    compiledAt: null,
+  };
+}
+
+function formatGasEstimate(raw: string | null | undefined) {
+  if (!raw) return null;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num.toLocaleString() : raw;
+}
+
+function relativeTimeFromNow(iso: string) {
+  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+// Reconstructs a CompileStatus from a file's cached compile fields, so a tab
+// that's already been compiled (this session or a previous one, via the DB)
+// doesn't need a fresh "Compile & Analyze" click to unlock its gated views.
+function deriveCompileStatus(file: EditorFile, chain: string): CompileStatus | null {
+  if (!file.contractId || !file.abi || !file.compiledAt) return null;
+  return {
+    solidityVersion: file.compilerVersion ?? "",
+    ok: true,
+    unsupported: false,
+    gas: file.gasEstimate ?? "",
+    time: relativeTimeFromNow(file.compiledAt),
+    contractId: file.contractId,
+    contractName: file.name.replace(/\.[^.]+$/, ""),
+    abi: file.abi,
+    errors: [],
+    warnings: [],
+    deployment: file.address
+      ? { ok: true, address: file.address, chain, rpcUrl: null, deployer: null, error: null }
+      : null,
   };
 }
 
@@ -269,6 +319,8 @@ export const useEditorStore = create<EditorState>((set) => ({
         name: file.name,
         source: file.source,
         language: file.language,
+        compileStatus: deriveCompileStatus(file, state.chain) ?? initialCompileStatus,
+        compileError: null,
       };
     }),
 
@@ -336,6 +388,10 @@ export const useEditorStore = create<EditorState>((set) => ({
               projectId: contract.projectId,
               ownerAddress: contract.ownerAddress,
               createdAt: contract.createdAt,
+              abi: contract.abi,
+              compilerVersion: contract.compilerVersion,
+              gasEstimate: formatGasEstimate(contract.gasEstimate),
+              compiledAt: contract.compiledAt,
             }
           : f,
       ),
@@ -351,7 +407,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   // the backend yet, since `contracts.source` stores a filesystem path, not
   // the file's content).
   setFilesFromContracts: (contracts) =>
-    set(() => {
+    set((state) => {
       const files: EditorFile[] =
         contracts.length > 0
           ? contracts.map((c) => ({
@@ -366,6 +422,10 @@ export const useEditorStore = create<EditorState>((set) => ({
               projectId: c.projectId,
               ownerAddress: c.ownerAddress,
               createdAt: c.createdAt,
+              abi: c.abi,
+              compilerVersion: c.compilerVersion,
+              gasEstimate: formatGasEstimate(c.gasEstimate),
+              compiledAt: c.compiledAt,
             }))
           : [
               {
@@ -384,6 +444,8 @@ export const useEditorStore = create<EditorState>((set) => ({
         name: active.name,
         source: active.source,
         language: active.language,
+        compileStatus: deriveCompileStatus(active, state.chain) ?? initialCompileStatus,
+        compileError: null,
       };
     }),
 
@@ -444,9 +506,25 @@ export const useEditorStore = create<EditorState>((set) => ({
   setCompiling: () => set({ compiling: true, compileError: null }),
 
   setCompileResult: (contractId, result) =>
-    set({
+    set((state) => ({
       compiling: false,
       compileError: null,
+      files: result.ok
+        ? state.files.map((f) =>
+            f.contractId === contractId
+              ? {
+                  ...f,
+                  abi: result.abi ?? null,
+                  compilerVersion: result.solidityVersion,
+                  gasEstimate: result.gas ?? null,
+                  compiledAt: new Date().toISOString(),
+                  address: result.deployment?.ok
+                    ? (result.deployment.address ?? f.address)
+                    : f.address,
+                }
+              : f,
+          )
+        : state.files,
       compileStatus: {
         solidityVersion: result.solidityVersion,
         ok: result.ok,
@@ -460,7 +538,7 @@ export const useEditorStore = create<EditorState>((set) => ({
         warnings: result.warnings ?? [],
         deployment: result.deployment,
       },
-    }),
+    })),
 
   setCompileError: (message) =>
     set((state) => ({

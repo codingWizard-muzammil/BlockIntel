@@ -1,20 +1,39 @@
 "use client";
 
-import { useState } from "react";
-import { CircleAlert, CircleCheck, Eye, FlaskConical, Loader2, Pencil } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Check,
+  CircleAlert,
+  CircleCheck,
+  Copy,
+  Eye,
+  EyeOff,
+  FlaskConical,
+  Loader2,
+  Pencil,
+  Wallet,
+} from "lucide-react";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ChainIcon } from "@/components/editor/chain-icons";
 import { useEditorStore } from "@/store/editor-store";
 import { useProjectStore } from "@/store/project-store";
-import type { AbiFragment } from "@/api/contracts";
+import type { AbiFragment, DeploymentResult, PlaygroundWallet } from "@/api/contracts";
 
 function isReadOnly(fragment: AbiFragment) {
   return fragment.stateMutability === "view" || fragment.stateMutability === "pure";
 }
 
-function FunctionCard({ contractId, fragment }: { contractId: string; fragment: AbiFragment }) {
+function FunctionCard({
+  contractId,
+  fragment,
+  onBalanceChange,
+}: {
+  contractId: string;
+  fragment: AbiFragment;
+  onBalanceChange: (balance: string) => void;
+}) {
   const callContractFunction = useProjectStore((s) => s.callContractFunction);
   const [values, setValues] = useState<string[]>(() => fragment.inputs.map(() => ""));
   const [ethValue, setEthValue] = useState("");
@@ -35,6 +54,7 @@ function FunctionCard({ contractId, fragment }: { contractId: string; fragment: 
         args: values,
         valueWei: payable && ethValue.trim() ? ethValue.trim() : undefined,
       });
+      if (response.walletBalance) onBalanceChange(response.walletBalance);
       if (response.txHash) {
         setOutput(`tx ${response.txHash} · gas ${response.gasUsed ?? "?"}`);
       } else if (response.result === null || response.result === undefined) {
@@ -94,6 +114,40 @@ function FunctionCard({ contractId, fragment }: { contractId: string; fragment: 
   );
 }
 
+function PrivateKeyRow({ privateKey }: { privateKey: string }) {
+  const [revealed, setRevealed] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(privateKey);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard API unavailable (insecure context, permissions) — nothing
+      // to fall back to, so just leave the button unresponsive.
+    }
+  }
+
+  return (
+    <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
+      <span className="font-mono text-xs text-ink">
+        {revealed ? privateKey : "•".repeat(24)}
+      </span>
+      <div className="flex shrink-0 items-center gap-1">
+        <Button size="sm" variant="secondary" onClick={() => setRevealed((r) => !r)}>
+          {revealed ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+          {revealed ? "Hide" : "Show"} key
+        </Button>
+        <Button size="sm" variant="secondary" onClick={handleCopy}>
+          {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+          {copied ? "Copied" : "Copy"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function PlaygroundView() {
   const status = useEditorStore((s) => s.compileStatus);
   const activeContractId = useEditorStore(
@@ -130,12 +184,50 @@ export function PlaygroundView() {
     );
   }
 
-  const contractId = status.contractId;
-  const deployment = status.deployment;
-  const abi = status.abi ?? [];
+  return (
+    <PlaygroundBody
+      key={status.contractId}
+      contractId={status.contractId}
+      contractName={status.contractName}
+      deployment={status.deployment}
+      abi={status.abi ?? []}
+    />
+  );
+}
+
+// Keyed by contractId in the parent, so switching to a different compiled
+// tab remounts this (and its local wallet state) instead of needing a
+// synchronous reset inside an effect.
+function PlaygroundBody({
+  contractId,
+  contractName,
+  deployment,
+  abi,
+}: {
+  contractId: string;
+  contractName: string | null;
+  deployment: DeploymentResult | null;
+  abi: AbiFragment[];
+}) {
+  const fetchPlaygroundWallet = useProjectStore((s) => s.fetchPlaygroundWallet);
+  const [wallet, setWallet] = useState<PlaygroundWallet | null>(null);
+  const deployed = Boolean(deployment?.ok && deployment.address);
   const readFns = abi.filter((f) => f.type === "function" && isReadOnly(f));
   const writeFns = abi.filter((f) => f.type === "function" && !isReadOnly(f));
-  const deployed = Boolean(deployment?.ok && deployment.address);
+
+  // Fetch (and, on the backend, auto-fund) the connected user's own
+  // playground wallet as soon as their contract is up, so a "before" balance
+  // is already visible ahead of any deposit/withdraw call.
+  useEffect(() => {
+    if (!deployed) return;
+    let cancelled = false;
+    fetchPlaygroundWallet(contractId).then((w) => {
+      if (!cancelled) setWallet(w);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [contractId, deployed, fetchPlaygroundWallet]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -145,7 +237,7 @@ export function PlaygroundView() {
           <div className="flex flex-col gap-2 text-sm">
             <div className="flex items-center gap-2 text-success">
               <CircleCheck className="size-4" />
-              {status.contractName} deployed to a local {deployment.chain} node
+              {contractName} deployed to a local {deployment.chain} node
             </div>
             <div className="flex items-center gap-2 text-muted">
               <ChainIcon chain={deployment.chain} className="size-3.5" />
@@ -161,6 +253,31 @@ export function PlaygroundView() {
       </Card>
 
       {deployed && (
+        <Card>
+          <CardHeading icon={Wallet} size="md">
+            Your test wallet
+          </CardHeading>
+          {wallet ? (
+            <>
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <span className="font-mono text-xs text-ink">{wallet.address}</span>
+                <span className="font-mono text-sm text-ink">{wallet.balance} ETH</span>
+              </div>
+              <PrivateKeyRow privateKey={wallet.privateKey} />
+            </>
+          ) : (
+            <p className="text-sm text-muted">Funding your wallet on the local node…</p>
+          )}
+          <p className="mt-2 text-xs text-muted">
+            Every call below runs as this address, and its balance updates live — call a
+            read function to check a value, then a write function, then check it again. Import
+            the private key above into MetaMask or Phantom to interact with it directly — it
+            only ever holds fake ETH on this local test node, never use it for real funds.
+          </p>
+        </Card>
+      )}
+
+      {deployed && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card>
             <CardHeading icon={Eye} size="md">
@@ -171,7 +288,14 @@ export function PlaygroundView() {
                 <p className="text-sm text-muted">No read-only functions.</p>
               ) : (
                 readFns.map((fn) => (
-                  <FunctionCard key={fn.signature} contractId={contractId} fragment={fn} />
+                  <FunctionCard
+                    key={fn.signature}
+                    contractId={contractId}
+                    fragment={fn}
+                    onBalanceChange={(balance) =>
+                      setWallet((w) => (w ? { ...w, balance } : w))
+                    }
+                  />
                 ))
               )}
             </div>
@@ -185,7 +309,14 @@ export function PlaygroundView() {
                 <p className="text-sm text-muted">No write functions.</p>
               ) : (
                 writeFns.map((fn) => (
-                  <FunctionCard key={fn.signature} contractId={contractId} fragment={fn} />
+                  <FunctionCard
+                    key={fn.signature}
+                    contractId={contractId}
+                    fragment={fn}
+                    onBalanceChange={(balance) =>
+                      setWallet((w) => (w ? { ...w, balance } : w))
+                    }
+                  />
                 ))
               )}
             </div>

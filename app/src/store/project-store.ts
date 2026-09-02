@@ -19,11 +19,13 @@ import {
   updateContractMetaRequest,
   compileContractRequest,
   callContractFunctionRequest,
+  fetchPlaygroundWalletRequest,
   type ApiContract,
   type CreateContractInput,
   type UpdateContractMetaInput,
   type CallFunctionInput,
   type CallFunctionResult,
+  type PlaygroundWallet,
 } from "@/api/contracts";
 import { useEditorStore } from "./editor-store";
 
@@ -87,6 +89,7 @@ type ProjectState = {
     contractId: string,
     input: CallFunctionInput,
   ) => Promise<CallFunctionResult>;
+  fetchPlaygroundWallet: (contractId: string) => Promise<PlaygroundWallet | null>;
 };
 
 function readStored(): string | null {
@@ -317,6 +320,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   callContractFunction: (contractId, input) => callContractFunctionRequest(contractId, input),
+
+  fetchPlaygroundWallet: async (contractId) => {
+    try {
+      return await queryClient.fetchQuery({
+        queryKey: ["contracts", contractId, "wallet"],
+        queryFn: () => fetchPlaygroundWalletRequest(contractId),
+      });
+    } catch (error) {
+      console.error("Failed to fetch playground wallet", error);
+      return null;
+    }
+  },
 }));
 
 // Keep the project list in sync with auth: load it as soon as a wallet

@@ -9,6 +9,12 @@ export type ApiContract = {
   language: string;
   source: string;
   createdAt: string;
+  // Cached result of the last successful compile — present once the
+  // contract has been compiled at least once, null until then.
+  abi: AbiFragment[] | null;
+  compilerVersion: string | null;
+  gasEstimate: string | null;
+  compiledAt: string | null;
 };
 
 export type CreateContractInput = {
@@ -76,6 +82,9 @@ export type DeploymentResult = {
   address: string | null;
   chain: string;
   rpcUrl: string | null;
+  // The playground wallet that deployed it — the connected user's own
+  // address on this chain, not a shared devnet account.
+  deployer: string | null;
   error: string | null;
 };
 
@@ -116,9 +125,20 @@ export type CallFunctionResult = {
   result?: unknown;
   txHash?: string;
   gasUsed?: string;
+  // The playground wallet's address/native balance right after this call —
+  // lets the UI reflect e.g. a payable deposit's effect without a refetch.
+  walletAddress?: string;
+  walletBalance?: string;
 };
 
 export async function callContractFunctionRequest(id: string, input: CallFunctionInput) {
   const { data } = await apiClient.post<CallFunctionResult>(`/contracts/${id}/call`, input);
+  return data;
+}
+
+export type PlaygroundWallet = { address: string; privateKey: string; balance: string };
+
+export async function fetchPlaygroundWalletRequest(id: string) {
+  const { data } = await apiClient.get<PlaygroundWallet>(`/contracts/${id}/wallet`);
   return data;
 }
