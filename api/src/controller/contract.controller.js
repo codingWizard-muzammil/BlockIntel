@@ -74,4 +74,13 @@ const callFunction = async (req, res) => {
   res.status(status).json(json);
 };
 
-module.exports = { create, update, getSource, remove, compileAndDeploy, callFunction };
+const getWallet = async (req, res) => {
+  const { id } = req.params;
+  const { address } = req.user;
+
+  const { json, status } = await compile.getWallet({ id, ownerAddress: address });
+
+  res.status(status).json(json);
+};
+
+module.exports = { create, update, getSource, remove, compileAndDeploy, callFunction, getWallet };

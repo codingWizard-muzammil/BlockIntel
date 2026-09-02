@@ -4,15 +4,37 @@ const { ethers } = require("ethers");
 const CorCrud = require("../utils/CorCrud");
 const logger = require("../utils/logger");
 const { CHAIN_RPC_URLS } = require("../constants/chains");
+const { derivePlaygroundWallet } = require("../utils/playgroundWallet");
 
 const contractModel = new CorCrud("contracts");
 const projectModel = new CorCrud("projects");
 
 // Hardhat's well-known local devnet account #0 — every `hardhat node`
-// instance in chains/ funds it automatically. Only ever used against the
-// ephemeral local test chains started from that folder, never a real network.
+// instance in chains/ funds it automatically. Used only as a faucet to top
+// up each user's own playground wallet (see playgroundWallet.js), never as
+// the account that actually deploys or calls a contract. Only ever used
+// against the ephemeral local test chains started from chains/, never a
+// real network.
 const DEV_DEPLOYER_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+const FUND_THRESHOLD_WEI = ethers.parseEther("1");
+const FUND_AMOUNT_WEI = ethers.parseEther("10");
+
+// Every user gets their own deterministic wallet per chain so contract
+// interactions carry their own identity as `msg.sender` — but a freshly
+// derived wallet starts at a zero balance, so top it up from the shared
+// devnet faucet whenever it runs low.
+async function getFundedPlaygroundWallet(ownerAddress, chain, provider) {
+  const wallet = derivePlaygroundWallet(ownerAddress, chain).connect(provider);
+  const balance = await provider.getBalance(wallet.address);
+  if (balance < FUND_THRESHOLD_WEI) {
+    const funder = new ethers.Wallet(DEV_DEPLOYER_KEY, provider);
+    const tx = await funder.sendTransaction({ to: wallet.address, value: FUND_AMOUNT_WEI });
+    await tx.wait();
+  }
+  return wallet;
+}
 
 function functionSignature(fragment) {
   return `${fragment.name}(${fragment.inputs.map((i) => i.type).join(",")})`;
@@ -84,22 +106,22 @@ function defaultArgFor(type) {
   return 0;
 }
 
-async function deployToChain({ chain, abi, bytecode }) {
+async function deployToChain({ chain, ownerAddress, abi, bytecode }) {
   const rpcUrl = CHAIN_RPC_URLS[chain];
   if (!rpcUrl) {
-    return { ok: false, address: null, rpcUrl: null, error: `No local node configured for ${chain}` };
+    return { ok: false, address: null, rpcUrl: null, deployer: null, error: `No local node configured for ${chain}` };
   }
 
   try {
     const provider = new ethers.JsonRpcProvider(rpcUrl);
-    const wallet = new ethers.Wallet(DEV_DEPLOYER_KEY, provider);
+    const wallet = await getFundedPlaygroundWallet(ownerAddress, chain, provider);
     const factory = new ethers.ContractFactory(abi, bytecode, wallet);
     const constructorInputs = abi.find((f) => f.type === "constructor")?.inputs ?? [];
     const args = constructorInputs.map((input) => defaultArgFor(input.type));
 
     const deployed = await factory.deploy(...args);
     await deployed.waitForDeployment();
-    return { ok: true, address: await deployed.getAddress(), rpcUrl, error: null };
+    return { ok: true, address: await deployed.getAddress(), rpcUrl, deployer: wallet.address, error: null };
   } catch (error) {
     logger.error("Contract deploy failed", { error: error.message, chain });
     const unreachable = /ECONNREFUSED|could not detect network|fetch failed|SERVER_ERROR/i.test(
@@ -109,6 +131,7 @@ async function deployToChain({ chain, abi, bytecode }) {
       ok: false,
       address: null,
       rpcUrl,
+      deployer: null,
       error: unreachable
         ? `Local ${chain} node isn't reachable at ${rpcUrl}. Start it with "docker compose up" from chains/.`
         : (error.shortMessage ?? error.message),
@@ -167,6 +190,7 @@ const compileAndDeploy = async ({ id, ownerAddress }) => {
 
   const deployment = await deployToChain({
     chain: project.chain,
+    ownerAddress,
     abi: result.abi,
     bytecode: result.bytecode,
   });
@@ -242,7 +266,11 @@ const callFunction = async ({ id, ownerAddress, functionName, args = [], valueWe
 
   try {
     const provider = new ethers.JsonRpcProvider(rpcUrl);
-    const wallet = new ethers.Wallet(DEV_DEPLOYER_KEY, provider);
+    // Every call runs as the connected user's own playground wallet, not a
+    // shared devnet account — only a write needs it topped up with gas.
+    const wallet = isWrite
+      ? await getFundedPlaygroundWallet(ownerAddress, project.chain, provider)
+      : derivePlaygroundWallet(ownerAddress, project.chain).connect(provider);
     const instance = new ethers.Contract(contract.address, abi, wallet);
     const callArgs = fragment.inputs.map((input, i) => coerceArg(input.type, args[i]));
     const fn = instance.getFunction(functionName);
@@ -251,18 +279,76 @@ const callFunction = async ({ id, ownerAddress, functionName, args = [], valueWe
       const overrides = fragment.stateMutability === "payable" && valueWei ? { value: BigInt(valueWei) } : {};
       const tx = await fn(...callArgs, overrides);
       const receipt = await tx.wait();
+      const walletBalance = ethers.formatEther(await provider.getBalance(wallet.address));
       return {
         status: 200,
-        json: { result: null, txHash: receipt.hash, gasUsed: receipt.gasUsed.toString() },
+        json: {
+          result: null,
+          txHash: receipt.hash,
+          gasUsed: receipt.gasUsed.toString(),
+          walletAddress: wallet.address,
+          walletBalance,
+        },
       };
     }
 
     const value = await fn(...callArgs);
-    return { status: 200, json: { result: serializeResult(value) } };
+    const walletBalance = ethers.formatEther(await provider.getBalance(wallet.address));
+    return {
+      status: 200,
+      json: { result: serializeResult(value), walletAddress: wallet.address, walletBalance },
+    };
   } catch (error) {
     logger.error("Playground call failed", { error: error.message, functionName });
     return { status: 422, json: { message: error.shortMessage ?? error.message } };
   }
 };
 
-module.exports = { compileAndDeploy, callFunction };
+// Lets the frontend show the user's playground wallet (address + native
+// balance) before they've made any calls yet, e.g. to see a deposit's effect
+// against a known starting balance. Tops it up the same way a write call
+// would, so the "before" balance the user sees is already meaningful.
+const getWallet = async ({ id, ownerAddress }) => {
+  const contract = await contractModel.findOne({ id });
+  if (!contract || contract.ownerAddress !== ownerAddress) {
+    return { status: 404, json: { message: "Contract not found" } };
+  }
+
+  const project = await projectModel.findOne({ id: contract.projectId });
+  const rpcUrl = CHAIN_RPC_URLS[project.chain];
+  if (!rpcUrl) {
+    return { status: 422, json: { message: `No local node configured for ${project.chain}` } };
+  }
+
+  try {
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const wallet = await getFundedPlaygroundWallet(ownerAddress, project.chain, provider);
+    const balance = await provider.getBalance(wallet.address);
+    return {
+      status: 200,
+      json: {
+        address: wallet.address,
+        // Safe to hand back: it's derived from JWT_SECRET one-way (HMAC) and
+        // only ever holds devnet ETH on an ephemeral local node — this is
+        // what lets the user import it into MetaMask/Phantom themselves.
+        privateKey: wallet.privateKey,
+        balance: ethers.formatEther(balance),
+      },
+    };
+  } catch (error) {
+    logger.error("Failed to fetch playground wallet", { error: error.message, chain: project.chain });
+    const unreachable = /ECONNREFUSED|could not detect network|fetch failed|SERVER_ERROR/i.test(
+      error.message,
+    );
+    return {
+      status: 422,
+      json: {
+        message: unreachable
+          ? `Local ${project.chain} node isn't reachable at ${rpcUrl}. Start it with "docker compose up" from chains/.`
+          : (error.shortMessage ?? error.message),
+      },
+    };
+  }
+};
+
+module.exports = { compileAndDeploy, callFunction, getWallet };

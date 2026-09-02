@@ -18,5 +18,8 @@ router
 router
   .route("/:id/call")
   .post(auth, validate(remove, "params"), validate(call, "body"), contractController.callFunction);
+router
+  .route("/:id/wallet")
+  .get(auth, validate(remove, "params"), contractController.getWallet);
 
 module.exports = router;
