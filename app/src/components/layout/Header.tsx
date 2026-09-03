@@ -2,12 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Moon } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 import { IconButton } from "@/components/ui/IconButton";
+import { usePreferencesStore } from "@/store/preferences-store";
 import { WalletControl } from "../wallet/WalletControl";
 
 export function Header() {
+  const resolvedTheme = usePreferencesStore((s) => s.resolvedTheme);
+  const setTheme = usePreferencesStore((s) => s.setTheme);
+
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-canvas px-4">
       <div className="flex items-center gap-3">
@@ -31,7 +35,13 @@ export function Header() {
           Docs
         </Link>
         <IconButton icon={GithubIcon} aria-label="GitHub" />
-        <IconButton icon={Moon} aria-label="Toggle theme" />
+        <IconButton
+          icon={resolvedTheme === "dark" ? Sun : Moon}
+          aria-label={
+            resolvedTheme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+          }
+          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+        />
         <WalletControl />
       </div>
     </header>

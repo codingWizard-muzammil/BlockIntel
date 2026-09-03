@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import Editor, { type BeforeMount } from "@monaco-editor/react";
+import { useEffect, useRef } from "react";
+import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
+import type { Monaco } from "@monaco-editor/react";
 import { useEditorStore } from "@/store/editor-store";
 import { useProjectStore } from "@/store/project-store";
+import { usePreferencesStore, type EditorColors } from "@/store/preferences-store";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 const AUTOSAVE_DELAY_MS = 1200;
@@ -240,6 +242,68 @@ function registerCLikeLanguage(
   });
 }
 
+// Fixed per-theme editor chrome (background, gutter, selection, …) — only
+// the token colors (below) are user-customizable.
+const DARK_EDITOR_COLORS = {
+  "editor.background": "#0f121a",
+  "editor.foreground": "#e2e8f0",
+  "editorLineNumber.foreground": "#4b5563",
+  "editorLineNumber.activeForeground": "#94a3b8",
+  "editor.lineHighlightBackground": "#1a1d2440",
+  "editorCursor.foreground": "#3b82f6",
+  "editor.selectionBackground": "#3b82f640",
+  "editorGutter.background": "#0f121a",
+  "editorWidget.background": "#1a1d24",
+  "editorWidget.border": "#2d3342",
+  "scrollbarSlider.background": "#2d334280",
+  "scrollbarSlider.hoverBackground": "#2d3342c0",
+};
+
+const LIGHT_EDITOR_COLORS = {
+  "editor.background": "#ffffff",
+  "editor.foreground": "#0f172a",
+  "editorLineNumber.foreground": "#94a3b8",
+  "editorLineNumber.activeForeground": "#475569",
+  "editor.lineHighlightBackground": "#f1f5f980",
+  "editorCursor.foreground": "#2563eb",
+  "editor.selectionBackground": "#2563eb26",
+  "editorGutter.background": "#ffffff",
+  "editorWidget.background": "#ffffff",
+  "editorWidget.border": "#e2e8f0",
+  "scrollbarSlider.background": "#e2e8f080",
+  "scrollbarSlider.hoverBackground": "#e2e8f0c0",
+};
+
+function tokenRules(colors: EditorColors) {
+  return [
+    { token: "keyword", foreground: colors.keyword.replace("#", "") },
+    { token: "type", foreground: colors.keyword.replace("#", "") },
+    { token: "comment", foreground: colors.comment.replace("#", "") },
+    { token: "string", foreground: colors.string.replace("#", "") },
+    { token: "number", foreground: colors.number.replace("#", "") },
+  ];
+}
+
+// Registers or re-registers both editor themes with the user's current
+// syntax colors — called from beforeMount (first mount) and again whenever
+// editorColors changes, since Monaco applies a redefined theme immediately
+// to whichever editor is currently using it by name.
+function defineThemes(monaco: Monaco, colors: EditorColors) {
+  monaco.editor.defineTheme("blockintel-dark", {
+    base: "vs-dark",
+    inherit: true,
+    rules: tokenRules(colors),
+    colors: DARK_EDITOR_COLORS,
+  });
+
+  monaco.editor.defineTheme("blockintel-light", {
+    base: "vs",
+    inherit: true,
+    rules: tokenRules(colors),
+    colors: LIGHT_EDITOR_COLORS,
+  });
+}
+
 const beforeMount: BeforeMount = (monaco) => {
   const languages = monaco.languages.getLanguages();
   const registered = new Set(languages.map((lang: { id: string }) => lang.id));
@@ -259,37 +323,30 @@ const beforeMount: BeforeMount = (monaco) => {
     registerCLikeLanguage(monaco, "move", MOVE_KEYWORDS, MOVE_TYPES);
   }
 
-  monaco.editor.defineTheme("blockintel-dark", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "keyword", foreground: "3b82f6" },
-      { token: "type", foreground: "3b82f6" },
-      { token: "comment", foreground: "94a3b8" },
-      { token: "string", foreground: "10b981" },
-      { token: "number", foreground: "f59e0b" },
-    ],
-    colors: {
-      "editor.background": "#0f121a",
-      "editor.foreground": "#e2e8f0",
-      "editorLineNumber.foreground": "#4b5563",
-      "editorLineNumber.activeForeground": "#94a3b8",
-      "editor.lineHighlightBackground": "#1a1d2440",
-      "editorCursor.foreground": "#3b82f6",
-      "editor.selectionBackground": "#3b82f640",
-      "editorGutter.background": "#0f121a",
-      "editorWidget.background": "#1a1d24",
-      "editorWidget.border": "#2d3342",
-      "scrollbarSlider.background": "#2d334280",
-      "scrollbarSlider.hoverBackground": "#2d3342c0",
-    },
-  });
+  defineThemes(monaco, usePreferencesStore.getState().editorColors);
 };
 
 export function CodeEditor() {
   const { source, setSource, language, activeFileId } = useEditorStore();
   const updateContract = useProjectStore((s) => s.updateContract);
   const saveContract = useProjectStore((s) => s.saveContract);
+  const resolvedTheme = usePreferencesStore((s) => s.resolvedTheme);
+  const editorFontSize = usePreferencesStore((s) => s.editorFontSize);
+  const editorWordWrap = usePreferencesStore((s) => s.editorWordWrap);
+  const editorTabSize = usePreferencesStore((s) => s.editorTabSize);
+  const editorMinimap = usePreferencesStore((s) => s.editorMinimap);
+  const editorColors = usePreferencesStore((s) => s.editorColors);
+  const monacoRef = useRef<Monaco | null>(null);
+
+  const handleMount: OnMount = (_editor, monaco) => {
+    monacoRef.current = monaco;
+  };
+
+  // Re-apply the theme definitions live when the user tweaks a syntax color
+  // in Preferences, instead of only picking them up on the next mount.
+  useEffect(() => {
+    if (monacoRef.current) defineThemes(monacoRef.current, editorColors);
+  }, [editorColors]);
 
   // Fires 1200ms after typing stops, deciding fresh (not from a stale
   // closure) whether the file already has a contract to PATCH or still
@@ -330,8 +387,9 @@ export function CodeEditor() {
     <Editor
       language={language ?? "plaintext"}
       value={source}
-      theme="blockintel-dark"
+      theme={resolvedTheme === "light" ? "blockintel-light" : "blockintel-dark"}
       beforeMount={beforeMount}
+      onMount={handleMount}
       onChange={(value) => {
         const next = value ?? "";
         setSource(next);
@@ -350,16 +408,16 @@ export function CodeEditor() {
         </div>
       }
       options={{
-        fontSize: 13,
+        fontSize: editorFontSize,
         fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
         lineHeight: 24,
-        minimap: { enabled: false },
+        minimap: { enabled: editorMinimap },
         scrollBeyondLastLine: false,
         automaticLayout: true,
         padding: { top: 8, bottom: 8 },
         renderLineHighlight: "line",
-        tabSize: 4,
-        wordWrap: "off",
+        tabSize: editorTabSize,
+        wordWrap: editorWordWrap ? "on" : "off",
         smoothScrolling: true,
         cursorBlinking: "smooth",
         scrollbar: {
