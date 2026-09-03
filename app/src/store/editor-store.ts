@@ -3,6 +3,7 @@ import { formatSolidity } from "@/lib/format-solidity";
 import type {
   ApiContract,
   AbiFragment,
+  AnalysisResult,
   CompileDiagnostic,
   CompileResult,
   DeploymentResult,
@@ -125,6 +126,10 @@ export type EditorFile = {
   compilerVersion: string | null;
   gasEstimate: string | null;
   compiledAt: string | null;
+  // Cached result of this file's last AI analysis (from the DB on load, or
+  // written by setAnalysisResult after an in-session analyze call).
+  analysis: AnalysisResult | null;
+  analyzedAt: string | null;
 };
 
 function createFileId() {
@@ -174,6 +179,8 @@ function emptyContractLinkage() {
     compilerVersion: null,
     gasEstimate: null,
     compiledAt: null,
+    analysis: null,
+    analyzedAt: null,
   };
 }
 
@@ -226,6 +233,13 @@ type EditorState = {
   compileStatus: CompileStatus;
   compiling: boolean;
   compileError: string | null;
+  // Id of the contract the current `analysis` belongs to — mirrors
+  // compileStatus.contractId so views can tell the active tab is the one
+  // that was actually analyzed.
+  analysisContractId: string | null;
+  analysis: AnalysisResult | null;
+  analyzing: boolean;
+  analysisError: string | null;
 
   addFile: () => string;
   setActiveFile: (id: string) => void;
@@ -244,6 +258,9 @@ type EditorState = {
   setCompiling: () => void;
   setCompileResult: (contractId: string, result: CompileResult) => void;
   setCompileError: (message: string) => void;
+  setAnalyzing: () => void;
+  setAnalysisResult: (contractId: string, analysis: AnalysisResult) => void;
+  setAnalysisError: (message: string) => void;
 };
 
 const initialCompileStatus: CompileStatus = {
@@ -276,6 +293,10 @@ export const useEditorStore = create<EditorState>((set) => ({
   compileStatus: initialCompileStatus,
   compiling: false,
   compileError: null,
+  analysisContractId: null,
+  analysis: null,
+  analyzing: false,
+  analysisError: null,
 
   addFile: () => {
     const id = createFileId();
@@ -321,6 +342,10 @@ export const useEditorStore = create<EditorState>((set) => ({
         language: file.language,
         compileStatus: deriveCompileStatus(file, state.chain) ?? initialCompileStatus,
         compileError: null,
+        analysisContractId: file.contractId,
+        analysis: file.analysis,
+        analyzing: false,
+        analysisError: null,
       };
     }),
 
@@ -392,6 +417,8 @@ export const useEditorStore = create<EditorState>((set) => ({
               compilerVersion: contract.compilerVersion,
               gasEstimate: formatGasEstimate(contract.gasEstimate),
               compiledAt: contract.compiledAt,
+              analysis: contract.analysis,
+              analyzedAt: contract.analyzedAt,
             }
           : f,
       ),
@@ -426,6 +453,8 @@ export const useEditorStore = create<EditorState>((set) => ({
               compilerVersion: c.compilerVersion,
               gasEstimate: formatGasEstimate(c.gasEstimate),
               compiledAt: c.compiledAt,
+              analysis: c.analysis,
+              analyzedAt: c.analyzedAt,
             }))
           : [
               {
@@ -446,6 +475,10 @@ export const useEditorStore = create<EditorState>((set) => ({
         language: active.language,
         compileStatus: deriveCompileStatus(active, state.chain) ?? initialCompileStatus,
         compileError: null,
+        analysisContractId: active.contractId,
+        analysis: active.analysis,
+        analyzing: false,
+        analysisError: null,
       };
     }),
 
@@ -521,10 +554,16 @@ export const useEditorStore = create<EditorState>((set) => ({
                   address: result.deployment?.ok
                     ? (result.deployment.address ?? f.address)
                     : f.address,
+                  // The source just changed underneath it — drop the stale
+                  // analysis so views show a loading state until the
+                  // follow-up analyze call lands.
+                  analysis: null,
+                  analyzedAt: null,
                 }
               : f,
           )
         : state.files,
+      analysis: result.ok && state.analysisContractId === contractId ? null : state.analysis,
       compileStatus: {
         solidityVersion: result.solidityVersion,
         ok: result.ok,
@@ -546,4 +585,21 @@ export const useEditorStore = create<EditorState>((set) => ({
       compileError: message,
       compileStatus: { ...state.compileStatus, ok: false },
     })),
+
+  setAnalyzing: () => set({ analyzing: true, analysisError: null }),
+
+  setAnalysisResult: (contractId, analysis) =>
+    set((state) => ({
+      analyzing: false,
+      analysisError: null,
+      analysisContractId: contractId,
+      analysis,
+      files: state.files.map((f) =>
+        f.contractId === contractId
+          ? { ...f, analysis, analyzedAt: new Date().toISOString() }
+          : f,
+      ),
+    })),
+
+  setAnalysisError: (message) => set({ analyzing: false, analysisError: message }),
 }));

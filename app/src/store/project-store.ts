@@ -18,6 +18,7 @@ import {
   updateContractRequest,
   updateContractMetaRequest,
   compileContractRequest,
+  analyzeContractRequest,
   callContractFunctionRequest,
   fetchPlaygroundWalletRequest,
   type ApiContract,
@@ -73,7 +74,7 @@ type ProjectState = {
   fetchProject: (id: string) => Promise<ApiProject | null>;
   createProject: (input: CreateProjectInput) => Promise<ApiProject | null>;
   deleteProject: (id: string) => Promise<boolean>;
-  saveContract: (fileId: string, input: CreateContractInput) => void;
+  saveContract: (fileId: string, input: CreateContractInput) => Promise<ApiContract>;
   updateContract: (contractId: string, source: string) => void;
   updateContractMeta: (
     fileId: string,
@@ -85,6 +86,7 @@ type ProjectState = {
   fetchContractSource: (contractId: string) => Promise<string | null>;
   deleteContract: (contractId: string, projectId: string) => Promise<boolean>;
   compileContract: (contractId: string) => Promise<void>;
+  analyzeContract: (contractId: string, force?: boolean) => Promise<void>;
   callContractFunction: (
     contractId: string,
     input: CallFunctionInput,
@@ -203,11 +205,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  // Fire-and-forget: persists a newly created contract without any loading
-  // state for the UI to bind a spinner to. Tracks the request in
-  // `pendingContractCreation` so a rename/language-change committed before
-  // it resolves (see `updateContractMeta`) doesn't fire a duplicate create.
+  // Persists a newly created contract, deduped by `pendingContractCreation`
+  // so a rename/language-change committed before it resolves (see
+  // `updateContractMeta`) — or a second caller such as the Compile/Analyze
+  // buttons racing an in-flight first save — chains onto the same request
+  // instead of firing a duplicate create for the same file.
   saveContract: (fileId, input) => {
+    const pending = pendingContractCreation.get(fileId);
+    if (pending) return pending;
+
     useEditorStore.getState().setFileContractSaving(fileId, true);
     const request = createContractRequest(input)
       .then((contract) => {
@@ -227,6 +233,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
       });
     pendingContractCreation.set(fileId, request);
+    return request;
   },
 
   // Fire-and-forget: called (debounced) on every edit to an already-saved
@@ -314,8 +321,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         const projectId = get().activeProjectId;
         if (projectId) queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
       }
+      // Fire the AI analysis in the background (not awaited) — Summary/
+      // Attacks/Improvements show their own loading state until it lands,
+      // it shouldn't block the compile→playground redirect.
+      if (compile.ok) void get().analyzeContract(contractId);
     } catch (error) {
       useEditorStore.getState().setCompileError((error as Error).message);
+    }
+  },
+
+  analyzeContract: async (contractId, force = false) => {
+    useEditorStore.getState().setAnalyzing();
+    try {
+      const analysis = await analyzeContractRequest(contractId, force);
+      useEditorStore.getState().setAnalysisResult(contractId, analysis);
+    } catch (error) {
+      useEditorStore.getState().setAnalysisError((error as Error).message);
     }
   },
 

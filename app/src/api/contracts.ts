@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import type { ContractSummary, AttackScenario, Improvement } from "@/types/analysis";
 
 export type ApiContract = {
   id: string;
@@ -15,6 +16,10 @@ export type ApiContract = {
   compilerVersion: string | null;
   gasEstimate: string | null;
   compiledAt: string | null;
+  // Cached result of the last AI analysis — present once /analyze has been
+  // called at least once for this contract, null until then.
+  analysis: AnalysisResult | null;
+  analyzedAt: string | null;
 };
 
 export type CreateContractInput = {
@@ -141,4 +146,18 @@ export type PlaygroundWallet = { address: string; privateKey: string; balance: s
 export async function fetchPlaygroundWalletRequest(id: string) {
   const { data } = await apiClient.get<PlaygroundWallet>(`/contracts/${id}/wallet`);
   return data;
+}
+
+export type AnalysisResult = {
+  summary: ContractSummary;
+  keyFeatures: string[];
+  attacks: AttackScenario[];
+  improvements: Improvement[];
+};
+
+export async function analyzeContractRequest(id: string, force = false) {
+  const { data } = await apiClient.post<{ analysis: AnalysisResult }>(`/contracts/${id}/analyze`, {
+    force,
+  });
+  return data.analysis;
 }
