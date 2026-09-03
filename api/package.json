@@ -10,6 +10,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google/genai": "^2.21.0",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "7.9.1",
     "@upstash/redis": "^1.38.2",
@@ -31,5 +32,9 @@
     "tweetnacl": "^1.0.3",
     "winston": "^3.19.0",
     "ws": "^8.21.3"
-  }
+  },
+  "trustedDependencies": [
+    "@google/genai",
+    "protobufjs"
+  ]
 }

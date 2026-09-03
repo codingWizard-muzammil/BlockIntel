@@ -54,6 +54,11 @@ model contracts {
   gasEstimate     String?
   compiledAt      DateTime?
 
+  // Cached result of the last AI analysis (summary/attacks/improvements),
+  // so the analyzer views don't re-prompt the model on every page visit.
+  analysis   Json?
+  analyzedAt DateTime?
+
   project projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("contracts")
