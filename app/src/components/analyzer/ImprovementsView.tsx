@@ -1,12 +1,15 @@
 "use client";
 
-import { TrendingUp } from "lucide-react";
+import { CircleAlert, Loader2, TrendingUp } from "lucide-react";
 import { ImprovementsCard } from "@/components/analyzer/ImprovementsCard";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { useEditorStore } from "@/store/editor-store";
 
 export function ImprovementsView() {
   const compiled = useEditorStore((s) => s.compileStatus.ok);
+  const analyzing = useEditorStore((s) => s.analyzing);
+  const analysisError = useEditorStore((s) => s.analysisError);
+  const analysis = useEditorStore((s) => s.analysis);
 
   if (!compiled) {
     return (
@@ -18,9 +21,23 @@ export function ImprovementsView() {
     );
   }
 
+  if (analyzing && !analysis) {
+    return (
+      <ComingSoon
+        icon={Loader2}
+        title="Analyzing your contract…"
+        description="The AI model is looking for gas, style, and security improvements."
+      />
+    );
+  }
+
+  if (analysisError && !analysis) {
+    return <ComingSoon icon={CircleAlert} title="Analysis failed" description={analysisError} />;
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
-      <ImprovementsCard improvements={[]} />
+      <ImprovementsCard improvements={analysis?.improvements ?? []} />
     </div>
   );
 }
