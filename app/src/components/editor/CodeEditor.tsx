@@ -289,9 +289,31 @@ const beforeMount: BeforeMount = (monaco) => {
 export function CodeEditor() {
   const { source, setSource, language, activeFileId } = useEditorStore();
   const updateContract = useProjectStore((s) => s.updateContract);
+  const saveContract = useProjectStore((s) => s.saveContract);
 
+  // Fires 1200ms after typing stops, deciding fresh (not from a stale
+  // closure) whether the file already has a contract to PATCH or still
+  // needs its first-save POST — a file created via "+ New file" only gets a
+  // `contractId` once something persists it, and edits were previously
+  // silently dropped (only local zustand state) until a rename or
+  // Compile/Analyze click happened to create it first.
   const [debouncedSave, flushSave] = useDebouncedCallback(
-    (contractId: string, value: string) => updateContract(contractId, value),
+    (fileId: string, value: string) => {
+      const file = useEditorStore.getState().files.find((f) => f.id === fileId);
+      if (!file) return;
+      if (file.contractId) {
+        updateContract(file.contractId, value);
+        return;
+      }
+      const projectId = useProjectStore.getState().activeProjectId;
+      if (!projectId) return;
+      saveContract(fileId, {
+        projectId,
+        name: file.name,
+        language: file.language,
+        source: value,
+      });
+    },
     AUTOSAVE_DELAY_MS,
   );
 
@@ -318,8 +340,8 @@ export function CodeEditor() {
         // programmatic `value` prop updates), so it's safe to autosave here.
         const state = useEditorStore.getState();
         const activeFile = state.files.find((f) => f.id === state.activeFileId);
-        if (activeFile?.contractId) {
-          debouncedSave(activeFile.contractId, next);
+        if (activeFile) {
+          debouncedSave(activeFile.id, next);
         }
       }}
       loading={
