@@ -26,6 +26,7 @@ export function SummaryView() {
   const analyzing = useEditorStore((s) => s.analyzing);
   const analysisError = useEditorStore((s) => s.analysisError);
   const analysis = useEditorStore((s) => s.analysis);
+  const analyzedAt = useEditorStore((s) => s.analyzedAt);
   const project = useGatedProject();
 
   if (!compiled) {
@@ -66,6 +67,7 @@ export function SummaryView() {
         <div className="flex-1">
           <ContractSummaryCard
             summary={analysis?.summary ?? null}
+            analyzedAt={analyzedAt}
             basicInfo={
               notAnalyzed
                 ? {

@@ -23,9 +23,11 @@ export type BasicContractInfo = {
 export function ContractSummaryCard({
   summary,
   basicInfo = null,
+  analyzedAt = null,
 }: {
   summary: ContractSummary | null;
   basicInfo?: BasicContractInfo | null;
+  analyzedAt?: string | null;
 }) {
   return (
     <Card>
@@ -47,6 +49,9 @@ export function ContractSummaryCard({
             <Row label="Compiler" value={summary.compiler} />
             <Row label="Lines of Code" value={summary.linesOfCode} />
             <Row label="Estimated Gas (avg)" value={summary.estimatedGasAvg} />
+            {analyzedAt && (
+              <Row label="Last Analyzed" value={new Date(analyzedAt).toLocaleString()} />
+            )}
           </div>
         </>
       ) : basicInfo ? (

@@ -238,6 +238,7 @@ type EditorState = {
   // that was actually analyzed.
   analysisContractId: string | null;
   analysis: AnalysisResult | null;
+  analyzedAt: string | null;
   analyzing: boolean;
   analysisError: string | null;
 
@@ -295,6 +296,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   compileError: null,
   analysisContractId: null,
   analysis: null,
+  analyzedAt: null,
   analyzing: false,
   analysisError: null,
 
@@ -344,6 +346,7 @@ export const useEditorStore = create<EditorState>((set) => ({
         compileError: null,
         analysisContractId: file.contractId,
         analysis: file.analysis,
+        analyzedAt: file.analyzedAt,
         analyzing: false,
         analysisError: null,
       };
@@ -477,6 +480,7 @@ export const useEditorStore = create<EditorState>((set) => ({
         compileError: null,
         analysisContractId: active.contractId,
         analysis: active.analysis,
+        analyzedAt: active.analyzedAt,
         analyzing: false,
         analysisError: null,
       };
@@ -564,6 +568,7 @@ export const useEditorStore = create<EditorState>((set) => ({
           )
         : state.files,
       analysis: result.ok && state.analysisContractId === contractId ? null : state.analysis,
+      analyzedAt: result.ok && state.analysisContractId === contractId ? null : state.analyzedAt,
       compileStatus: {
         solidityVersion: result.solidityVersion,
         ok: result.ok,
@@ -589,17 +594,19 @@ export const useEditorStore = create<EditorState>((set) => ({
   setAnalyzing: () => set({ analyzing: true, analysisError: null }),
 
   setAnalysisResult: (contractId, analysis) =>
-    set((state) => ({
-      analyzing: false,
-      analysisError: null,
-      analysisContractId: contractId,
-      analysis,
-      files: state.files.map((f) =>
-        f.contractId === contractId
-          ? { ...f, analysis, analyzedAt: new Date().toISOString() }
-          : f,
-      ),
-    })),
+    set((state) => {
+      const analyzedAt = new Date().toISOString();
+      return {
+        analyzing: false,
+        analysisError: null,
+        analysisContractId: contractId,
+        analysis,
+        analyzedAt,
+        files: state.files.map((f) =>
+          f.contractId === contractId ? { ...f, analysis, analyzedAt } : f,
+        ),
+      };
+    }),
 
   setAnalysisError: (message) => set({ analyzing: false, analysisError: message }),
 }));
