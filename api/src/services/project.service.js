@@ -84,6 +84,15 @@ const deleteProject = async ({ id, ownerAddress }) => {
     return { status: 404, json: { message: "Project not found" } };
   }
 
+  const projectPath = path.join(
+    __dirname,
+    "../../../contracts",
+    ownerAddress,
+    id,
+  );
+
+  await fs.rm(projectPath, { force: true, recursive: true });
+
   return { status: 200, json: { message: "Project deleted" } };
 };
 
