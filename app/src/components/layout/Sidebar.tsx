@@ -23,7 +23,7 @@ export function Sidebar() {
   const topItems = [
     {
       href:
-        activeProjectId && activeProjectId in projects.map((p)=> p.id)
+        activeProjectId && projects.length
           ? `/contract/${activeProjectId}/summary`
           : "/contract",
       icon: Code2,
