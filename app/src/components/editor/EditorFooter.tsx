@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editor-store";
 import { useProjectStore } from "@/store/project-store";
+import { redirect, usePathname } from "next/navigation";
 
 export function EditorFooter() {
   const status = useEditorStore((s) => s.compileStatus);
@@ -24,6 +25,8 @@ export function EditorFooter() {
   const compileContract = useProjectStore((s) => s.compileContract);
 
   const failureMessage = compileError ?? status.errors[0]?.message ?? null;
+
+  const pathname = usePathname();
 
   return (
     <div className="flex shrink-0 flex-col gap-4 border-t border-border px-4 pb-4 pt-4.25">
@@ -56,12 +59,19 @@ export function EditorFooter() {
             </div>
           </>
         ) : status.unsupported ? (
-          <span className="flex items-center gap-1 truncate text-warning" title={failureMessage ?? undefined}>
+          <span
+            className="flex items-center gap-1 truncate text-warning"
+            title={failureMessage ?? undefined}
+          >
             <CircleAlert className="size-3 shrink-0" />
-            {failureMessage ?? "Compilation for this language isn't supported yet"}
+            {failureMessage ??
+              "Compilation for this language isn't supported yet"}
           </span>
         ) : failureMessage ? (
-          <span className="flex items-center gap-1 truncate text-danger" title={failureMessage}>
+          <span
+            className="flex items-center gap-1 truncate text-danger"
+            title={failureMessage}
+          >
             <XCircle className="size-3 shrink-0" />
             {failureMessage}
           </span>
@@ -74,8 +84,17 @@ export function EditorFooter() {
           variant="primary"
           className="flex-1"
           disabled={!activeContractId || compiling}
-          title={activeContractId ? undefined : "Name this file to save it before compiling"}
-          onClick={() => activeContractId && compileContract(activeContractId)}
+          title={
+            activeContractId
+              ? undefined
+              : "Name this file to save it before compiling"
+          }
+          onClick={() =>
+            activeContractId &&
+            compileContract(activeContractId).then(() => {
+              redirect(pathname.replace("/summary", "/playground"), "replace");
+            })
+          }
         >
           {compiling ? (
             <Loader2 className="size-[10.5px] animate-spin" />
