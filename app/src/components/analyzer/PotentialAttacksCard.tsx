@@ -15,7 +15,13 @@ function AttackItem({ attack, index }: { attack: AttackScenario; index: number }
   );
 }
 
-export function PotentialAttacksCard({ attacks }: { attacks: AttackScenario[] }) {
+export function PotentialAttacksCard({
+  attacks,
+  notAnalyzed = false,
+}: {
+  attacks: AttackScenario[];
+  notAnalyzed?: boolean;
+}) {
   return (
     <Card>
       <CardHeading icon={ShieldAlert}>Potential Attacks</CardHeading>
@@ -35,7 +41,11 @@ export function PotentialAttacksCard({ attacks }: { attacks: AttackScenario[] })
           </a>
         </>
       ) : (
-        <p className="text-sm text-muted">No attack scenarios found yet.</p>
+        <p className="text-sm text-muted">
+          {notAnalyzed
+            ? "Not analyzed yet — click Analyze to find potential attack vectors."
+            : "No attack scenarios found yet."}
+        </p>
       )}
     </Card>
   );

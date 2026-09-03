@@ -20,7 +20,13 @@ function ImprovementItem({ improvement }: { improvement: Improvement }) {
   );
 }
 
-export function ImprovementsCard({ improvements }: { improvements: Improvement[] }) {
+export function ImprovementsCard({
+  improvements,
+  notAnalyzed = false,
+}: {
+  improvements: Improvement[];
+  notAnalyzed?: boolean;
+}) {
   return (
     <Card>
       <CardHeading icon={Lightbulb}>Improvements</CardHeading>
@@ -40,7 +46,11 @@ export function ImprovementsCard({ improvements }: { improvements: Improvement[]
           </a>
         </>
       ) : (
-        <p className="text-sm text-muted">No improvement suggestions yet.</p>
+        <p className="text-sm text-muted">
+          {notAnalyzed
+            ? "Not analyzed yet — click Analyze to get improvement suggestions."
+            : "No improvement suggestions yet."}
+        </p>
       )}
     </Card>
   );

@@ -37,7 +37,7 @@ export function AttacksView() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PotentialAttacksCard attacks={analysis?.attacks ?? []} />
+      <PotentialAttacksCard attacks={analysis?.attacks ?? []} notAnalyzed={!analysis} />
     </div>
   );
 }

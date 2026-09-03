@@ -1,7 +1,13 @@
 import { CheckCircle2, Star } from "lucide-react";
 import { Card, CardHeading } from "@/components/ui/Card";
 
-export function KeyFeaturesCard({ features }: { features: string[] }) {
+export function KeyFeaturesCard({
+  features,
+  notAnalyzed = false,
+}: {
+  features: string[];
+  notAnalyzed?: boolean;
+}) {
   return (
     <Card>
       <CardHeading icon={Star} size="md">
@@ -17,7 +23,11 @@ export function KeyFeaturesCard({ features }: { features: string[] }) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted">No key features detected yet.</p>
+        <p className="text-sm text-muted">
+          {notAnalyzed
+            ? "Not analyzed yet — click Analyze to detect key features."
+            : "No key features detected yet."}
+        </p>
       )}
     </Card>
   );

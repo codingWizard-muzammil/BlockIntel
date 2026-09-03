@@ -37,7 +37,7 @@ export function ImprovementsView() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <ImprovementsCard improvements={analysis?.improvements ?? []} />
+      <ImprovementsCard improvements={analysis?.improvements ?? []} notAnalyzed={!analysis} />
     </div>
   );
 }

@@ -11,7 +11,22 @@ function Row({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-export function ContractSummaryCard({ summary }: { summary: ContractSummary | null }) {
+// Compile-only info (compiler/lines/gas) — deterministic, available before
+// AI analysis has ever run. Shown in place of the full AI-generated summary
+// (description/purpose/type/visibility) until Analyze is clicked.
+export type BasicContractInfo = {
+  compiler: string;
+  linesOfCode: number;
+  estimatedGasAvg: string;
+};
+
+export function ContractSummaryCard({
+  summary,
+  basicInfo = null,
+}: {
+  summary: ContractSummary | null;
+  basicInfo?: BasicContractInfo | null;
+}) {
   return (
     <Card>
       <CardHeading icon={FileText}>Contract Summary</CardHeading>
@@ -32,6 +47,18 @@ export function ContractSummaryCard({ summary }: { summary: ContractSummary | nu
             <Row label="Compiler" value={summary.compiler} />
             <Row label="Lines of Code" value={summary.linesOfCode} />
             <Row label="Estimated Gas (avg)" value={summary.estimatedGasAvg} />
+          </div>
+        </>
+      ) : basicInfo ? (
+        <>
+          <p className="mb-2.5 text-sm leading-[22.75px] text-muted">
+            Compiled successfully. Click Analyze for the AI-generated
+            description, key features, attacks & improvements.
+          </p>
+          <div className="border-t border-border pt-1">
+            <Row label="Compiler" value={basicInfo.compiler} />
+            <Row label="Lines of Code" value={basicInfo.linesOfCode} />
+            <Row label="Estimated Gas (avg)" value={basicInfo.estimatedGasAvg} />
           </div>
         </>
       ) : (
