@@ -5,6 +5,7 @@ const logger = require("../utils/logger");
 const { generateJson } = require("../utils/llmClient");
 
 const contractModel = new CorCrud("contracts");
+const analyzeModel = new CorCrud("analyze");
 
 const REQUIRED_KEYS = ["summary", "keyFeatures", "attacks", "improvements"];
 
@@ -101,16 +102,18 @@ const analyzeContract = async ({ id, ownerAddress, force = false }) => {
     return { status: 404, json: { message: "Contract not found" } };
   }
 
+  const existing = await analyzeModel.findOne({ contractId: id });
+
   // Serve the cached result as long as it was generated after the last edit
   // that changed the source (i.e. after the last compile), so switching
   // between Summary/Attacks/Improvements tabs doesn't re-prompt the model.
   const isFresh =
-    contract.analysis &&
-    contract.analyzedAt &&
-    (!contract.compiledAt || contract.analyzedAt >= contract.compiledAt);
+    existing?.analysis &&
+    existing?.analyzedAt &&
+    (!contract.compiledAt || existing.analyzedAt >= contract.compiledAt);
 
   if (!force && isFresh) {
-    return { status: 200, json: { analysis: contract.analysis } };
+    return { status: 200, json: { analysis: existing.analysis } };
   }
 
   let source;
@@ -156,7 +159,11 @@ const analyzeContract = async ({ id, ownerAddress, force = false }) => {
   };
 
   const analyzedAt = new Date();
-  await contractModel.update({ id }, { analysis, analyzedAt });
+  await analyzeModel.upsert(
+    { contractId: id },
+    { contractId: id, analysis, analyzedAt },
+    { analysis, analyzedAt },
+  );
 
   return { status: 200, json: { analysis } };
 };

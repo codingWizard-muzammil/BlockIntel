@@ -2,6 +2,7 @@ const path = require("node:path");
 const CorCrud = require("../utils/CorCrud");
 const fs = require("node:fs/promises");
 const { CHAIN_LANGUAGES, LANGUAGE_EXTENSIONS } = require("../constants/chains");
+const { serializeContract } = require("../utils/serializeContract");
 
 const projectModel = new CorCrud("projects");
 const contractModel = new CorCrud("contracts");
@@ -11,6 +12,10 @@ const contractModel = new CorCrud("contracts");
 // to seed a new project's first contract.
 function defaultLanguageForChain(chain) {
   return CHAIN_LANGUAGES[chain.toLowerCase()][0];
+}
+
+function serializeProject(project) {
+  return { ...project, contracts: project.contracts.map(serializeContract) };
 }
 
 const createProject = async ({
@@ -57,33 +62,33 @@ const createProject = async ({
   // captured before the contract existed.
   const [fullProject] = await projectModel.findMany({
     where: { id: project.id },
-    include: { contracts: true },
+    include: { contracts: { include: { analyze: true } } },
   });
 
-  return { status: 201, json: { project: fullProject } };
+  return { status: 201, json: { project: serializeProject(fullProject) } };
 };
 
 const listProjects = async ({ ownerAddress }) => {
   const projects = await projectModel.findMany({
     where: { ownerAddress },
     orderBy: { createdAt: "desc" },
-    include: { contracts: true },
+    include: { contracts: { include: { analyze: true } } },
   });
 
-  return { status: 200, json: { projects } };
+  return { status: 200, json: { projects: projects.map(serializeProject) } };
 };
 
 const getProject = async ({ id, ownerAddress }) => {
   const [project] = await projectModel.findMany({
     where: { id },
-    include: { contracts: true },
+    include: { contracts: { include: { analyze: true } } },
   });
 
   if (!project || project.ownerAddress !== ownerAddress) {
     return { status: 404, json: { message: "Project not found" } };
   }
 
-  return { status: 200, json: { project } };
+  return { status: 200, json: { project: serializeProject(project) } };
 };
 
 const deleteProject = async ({ id, ownerAddress }) => {

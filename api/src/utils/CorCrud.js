@@ -24,9 +24,9 @@ class CorCrud {
     }
   }
 
-  async findOne(where) {
+  async findOne(where, options = {}) {
     try {
-      return await this.model.findUnique({ where });
+      return await this.model.findUnique({ where, ...options });
     } catch (error) {
       logger.error("CorCrud findOne error", { error: error.message });
       throw error;

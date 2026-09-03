@@ -3,6 +3,7 @@ const fs = require("node:fs/promises");
 const CorCrud = require("../utils/CorCrud");
 const logger = require("../utils/logger");
 const { LANGUAGE_EXTENSIONS } = require("../constants/chains");
+const { serializeContract } = require("../utils/serializeContract");
 
 const contractModel = new CorCrud("contracts");
 const projectModel = new CorCrud("projects");
@@ -37,7 +38,7 @@ const createContract = async ({ projectId, name, language, source, ownerAddress 
     source: filePath,
   });
 
-  return { status: 201, json: { contract } };
+  return { status: 201, json: { contract: serializeContract(contract) } };
 };
 
 const updateContract = async ({ id, ownerAddress, name, language, source }) => {
@@ -68,8 +69,8 @@ const updateContract = async ({ id, ownerAddress, name, language, source }) => {
     await fs.writeFile(sourcePath, source, "utf8");
   }
 
-  const updated = await contractModel.findOne({ id });
-  return { status: 200, json: { contract: updated } };
+  const updated = await contractModel.findOne({ id }, { include: { analyze: true } });
+  return { status: 200, json: { contract: serializeContract(updated) } };
 };
 
 const getContractSource = async ({ id, ownerAddress }) => {
