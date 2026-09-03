@@ -18,6 +18,7 @@ import { ChainIcon } from "@/components/editor/chain-icons";
 import { PrivateKeyRow } from "@/components/wallet/PrivateKeyRow";
 import { useEditorStore } from "@/store/editor-store";
 import { useProjectStore } from "@/store/project-store";
+import { CHAIN_SYMBOLS } from "@/store/wallet-store";
 import { usePlaygroundWalletBalance } from "@/hooks/usePlaygroundWalletBalance";
 import { mintWalletRequest } from "@/api/wallet";
 import type { AbiFragment, DeploymentResult, PlaygroundWallet } from "@/api/contracts";
@@ -251,14 +252,16 @@ function PlaygroundBody({
               <div className="flex items-center justify-between gap-2 text-sm">
                 <span className="font-mono text-xs text-ink">{wallet.address}</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm text-ink">{wallet.balance} ETH</span>
+                  <span className="font-mono text-sm text-ink">
+                    {wallet.balance} {deployment?.chain ? CHAIN_SYMBOLS[deployment.chain] : ""}
+                  </span>
                   <Button size="sm" variant="secondary" disabled={minting} onClick={handleMint}>
                     {minting ? (
                       <Loader2 className="size-3 animate-spin" />
                     ) : (
                       <Sparkles className="size-3" />
                     )}
-                    Mint +100 ETH
+                    Mint +100 {deployment?.chain ? CHAIN_SYMBOLS[deployment.chain] : ""}
                   </Button>
                 </div>
               </div>
