@@ -5,8 +5,9 @@ const logsDir = path.join(__dirname, "../logs");
 
 const logFormat = winston.format.combine(
     winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message }) => {
-        return `${timestamp} ${level.toUpperCase()} ${message}`;
+    winston.format.printf(({ timestamp, level, message, ...meta }) => {
+        const extra = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : "";
+        return `${timestamp} ${level.toUpperCase()} ${message}${extra}`;
     }),
 );
 
