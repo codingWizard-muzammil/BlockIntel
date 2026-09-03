@@ -30,7 +30,6 @@ function ContractWorkspace({
 }) {
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const fetchContractSource = useProjectStore((s) => s.fetchContractSource);
-  const analyzeContract = useProjectStore((s) => s.analyzeContract);
   const setLockedChain = useEditorStore((s) => s.setLockedChain);
   const setFilesFromContracts = useEditorStore((s) => s.setFilesFromContracts);
   const hydrateFileSource = useEditorStore((s) => s.hydrateFileSource);
@@ -40,12 +39,6 @@ function ContractWorkspace({
   const activeSourceEmpty = useEditorStore(
     (s) => !s.files.find((f) => f.id === s.activeFileId)?.source,
   );
-  const compiledContractId = useEditorStore((s) =>
-    s.compileStatus.ok ? s.compileStatus.contractId : null,
-  );
-  const hasAnalysis = useEditorStore((s) => s.analysis != null);
-  const analyzing = useEditorStore((s) => s.analyzing);
-  const analysisError = useEditorStore((s) => s.analysisError);
   const hydratedContractIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -85,14 +78,6 @@ function ContractWorkspace({
       if (file) hydrateFileSource(file.id, source);
     });
   }, [activeContractId, activeSourceEmpty, fetchContractSource, hydrateFileSource]);
-
-  // A contract compiled in an earlier session (or before this feature
-  // existed) can carry a compiled status with no cached analysis yet —
-  // kick one off so Summary/Attacks/Improvements don't stay empty forever.
-  useEffect(() => {
-    if (!compiledContractId || hasAnalysis || analyzing || analysisError) return;
-    void analyzeContract(compiledContractId);
-  }, [compiledContractId, hasAnalysis, analyzing, analysisError, analyzeContract]);
 
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden">

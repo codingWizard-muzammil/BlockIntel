@@ -311,7 +311,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   // Compiles the contract and — for chains with a local node configured —
   // deploys it, then hands the result to editor-store so every gated view
-  // (Summary/Attacks/Improvements/Playground) can react to it.
+  // (Summary/Attacks/Improvements/Playground) can react to it. Deliberately
+  // does NOT also trigger AI analysis — Compile and Analyze are separate
+  // user-initiated actions; Summary falls back to a compile-only "basic"
+  // view (compiler/lines/gas) until Analyze is explicitly run.
   compileContract: async (contractId) => {
     useEditorStore.getState().setCompiling();
     try {
@@ -321,10 +324,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         const projectId = get().activeProjectId;
         if (projectId) queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
       }
-      // Fire the AI analysis in the background (not awaited) — Summary/
-      // Attacks/Improvements show their own loading state until it lands,
-      // it shouldn't block the compile→playground redirect.
-      if (compile.ok) void get().analyzeContract(contractId);
     } catch (error) {
       useEditorStore.getState().setCompileError((error as Error).message);
     }
