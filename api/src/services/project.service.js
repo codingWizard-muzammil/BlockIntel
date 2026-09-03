@@ -51,7 +51,16 @@ const createProject = async ({
     source: filePath,
   });
 
-  return { status: 201, json: { project } };
+  // Re-fetch with its seed contract included — the frontend renders the
+  // create response directly (see ProjectStateGate/ContractShell), so it
+  // needs the same shape as getProject/listProjects, not the bare `project`
+  // captured before the contract existed.
+  const [fullProject] = await projectModel.findMany({
+    where: { id: project.id },
+    include: { contracts: true },
+  });
+
+  return { status: 201, json: { project: fullProject } };
 };
 
 const listProjects = async ({ ownerAddress }) => {
