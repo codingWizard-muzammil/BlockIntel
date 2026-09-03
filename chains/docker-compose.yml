@@ -41,14 +41,12 @@ services:
       - "8550:8545"
     restart: unless-stopped
 
-  solana:
-    build: ./solana
-    container_name: blockintel-chain-solana
-    ports:
-      - "8899:8899"
-      - "8900:8900"
-      - "9900:9900"
-    restart: unless-stopped
+# Solana isn't here: solana-test-validator hits two Docker-specific
+# problems that don't exist running natively — it panics on a wildcard
+# --bind-address (needed to satisfy Docker's port-mapping), and newer
+# releases hard-require io_uring, which Docker's default seccomp profile
+# blocks. Run it with ./solana/start.sh (and ./solana/stop.sh) instead —
+# see chains/solana/README.md.
 
 # To add another chain: create ./<chain>/Dockerfile, then add a service
 # block here pointing `build:` at that folder. `docker compose up --build`
