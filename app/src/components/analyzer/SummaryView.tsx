@@ -71,7 +71,7 @@ export function SummaryView() {
             summary={analysis?.summary ?? null}
             analyzedAt={analyzedAt}
             basicInfo={
-              notAnalyzed
+              compiled
                 ? {
                     compiler: compileStatus.solidityVersion,
                     linesOfCode: countLinesOfCode(activeSource),

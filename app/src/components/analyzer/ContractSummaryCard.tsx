@@ -29,6 +29,15 @@ export function ContractSummaryCard({
   basicInfo?: BasicContractInfo | null;
   analyzedAt?: string | null;
 }) {
+  // Compiler/lines/gas are deterministic — computed from the contract's own
+  // compile result, not the AI. When a fresh basicInfo is available, prefer
+  // it over the copy baked into `summary` at whatever earlier point Analyze
+  // last ran, so these three rows can never go stale relative to the most
+  // recent compile just because the AI summary hasn't been re-run since.
+  const compiler = basicInfo?.compiler ?? summary?.compiler;
+  const linesOfCode = basicInfo?.linesOfCode ?? summary?.linesOfCode;
+  const estimatedGasAvg = basicInfo?.estimatedGasAvg ?? summary?.estimatedGasAvg;
+
   return (
     <Card>
       <CardHeading icon={FileText}>Contract Summary</CardHeading>
@@ -46,9 +55,9 @@ export function ContractSummaryCard({
             <Row label="Purpose" value={summary.purpose} />
             <Row label="Type" value={summary.type} />
             <Row label="Visibility" value={summary.visibility} />
-            <Row label="Compiler" value={summary.compiler} />
-            <Row label="Lines of Code" value={summary.linesOfCode} />
-            <Row label="Estimated Gas (avg)" value={summary.estimatedGasAvg} />
+            <Row label="Compiler" value={compiler ?? summary.compiler} />
+            <Row label="Lines of Code" value={linesOfCode ?? summary.linesOfCode} />
+            <Row label="Estimated Gas (avg)" value={estimatedGasAvg ?? summary.estimatedGasAvg} />
             {analyzedAt && (
               <Row label="Last Analyzed" value={new Date(analyzedAt).toLocaleString()} />
             )}
