@@ -3,6 +3,7 @@ const { Type } = require("@google/genai");
 const CorCrud = require("../utils/CorCrud");
 const logger = require("../utils/logger");
 const { generateJson } = require("../utils/llmClient");
+const { formatGasEstimate } = require("../utils/gas");
 
 const contractModel = new CorCrud("contracts");
 const analyzeModel = new CorCrud("analyze");
@@ -149,9 +150,7 @@ const analyzeContract = async ({ id, ownerAddress, force = false }) => {
       ...parsed.summary,
       compiler: contract.compilerVersion ?? "Not compiled yet",
       linesOfCode: countLinesOfCode(source),
-      estimatedGasAvg: contract.gasEstimate
-        ? Number(contract.gasEstimate).toLocaleString()
-        : "N/A",
+      estimatedGasAvg: formatGasEstimate(contract.gasEstimate) ?? "N/A",
     },
     keyFeatures: parsed.keyFeatures ?? [],
     attacks: parsed.attacks ?? [],

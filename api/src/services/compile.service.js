@@ -5,6 +5,7 @@ const solc = require("solc");
 const { ethers } = require("ethers");
 const CorCrud = require("../utils/CorCrud");
 const logger = require("../utils/logger");
+const { formatGasEstimate } = require("../utils/gas");
 const { CHAIN_RPC_URLS } = require("../constants/chains");
 const { derivePlaygroundWallet, ensureFunded } = require("../utils/playgroundWallet");
 const walletService = require("./wallet.service");
@@ -206,7 +207,15 @@ async function deployToChain({ chain, ownerAddress, abi, bytecode, allContracts 
     await deployed.waitForDeployment();
     const address = await deployed.getAddress();
     const dependencies = await detectChildDeployments({ provider, deployerAddress: address, allContracts });
-    return { ok: true, address, rpcUrl, deployer: wallet.address, error: null, dependencies };
+    // Actual gas the deployment transaction used, straight from its receipt
+    // — a real number for every contract that actually deploys, unlike
+    // solc's static gasEstimates.creation.totalCost (which reports the
+    // string "infinite" whenever it can't bound the cost structurally, e.g.
+    // dynamic-length constructor args).
+    const deployTx = deployed.deploymentTransaction();
+    const receipt = deployTx ? await deployTx.wait() : null;
+    const gasUsed = receipt?.gasUsed != null ? receipt.gasUsed.toString() : null;
+    return { ok: true, address, rpcUrl, deployer: wallet.address, error: null, dependencies, gasUsed };
   } catch (error) {
     logger.error("Contract deploy failed", { error: error.message, chain });
     const unreachable = /ECONNREFUSED|could not detect network|fetch failed|SERVER_ERROR/i.test(
@@ -301,6 +310,13 @@ const compileAndDeploy = async ({ id, ownerAddress }) => {
     allContracts,
   });
 
+  // Prefer the real gas the deployment transaction actually used over
+  // solc's static estimate — it's a concrete number for every contract that
+  // deploys, whereas solc reports "infinite" whenever it can't structurally
+  // bound the creation cost. Fall back to the static estimate only when the
+  // contract didn't actually deploy (e.g. the local chain node is down).
+  const gasEstimate = deployment.ok && deployment.gasUsed ? deployment.gasUsed : result.gasEstimate;
+
   // Cache the compiled ABI/bytecode so the playground's call endpoint can
   // reuse them instead of recompiling from source on every function call.
   await contractModel.update(
@@ -309,7 +325,7 @@ const compileAndDeploy = async ({ id, ownerAddress }) => {
       abi: result.abi,
       bytecode: result.bytecode,
       compilerVersion: result.solidityVersion,
-      gasEstimate: result.gasEstimate ?? null,
+      gasEstimate: gasEstimate ?? null,
       compiledAt: new Date(),
       ...(deployment.ok ? { address: deployment.address } : {}),
     },
@@ -353,7 +369,7 @@ const compileAndDeploy = async ({ id, ownerAddress }) => {
       compile: {
         ...result,
         time,
-        gas: result.gasEstimate ? Number(result.gasEstimate).toLocaleString() : null,
+        gas: formatGasEstimate(gasEstimate),
         deployment: { ...deployment, chain: project.chain, dependencies },
       },
     },
