@@ -27,7 +27,13 @@ async function callOpenAiCompatible({ url, apiKey, model, prompt, headers = {} }
       model,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      temperature: 0.3,
+      // Groq accepts 0 fine. This narrows (doesn't eliminate — confirmed
+      // even with a fixed `seed` on Groq's reasoning models, repeated calls
+      // on unchanged source can still return a different-looking set of
+      // findings) run-to-run variance in the analyze/apply-improvement
+      // results — that residual variance is inherent to these providers'
+      // inference stacks, not something a client-side setting controls.
+      temperature: 0,
     }),
   });
 
@@ -100,7 +106,12 @@ function buildGeminiProvider() {
       const response = await client.models.generateContent({
         model,
         contents: prompt,
-        config: geminiSchema ? { responseMimeType: "application/json", responseSchema: geminiSchema } : undefined,
+        // Same reasoning as the OpenAI-compatible providers above — narrows
+        // (but can't fully eliminate) run-to-run drift on unchanged source.
+        config: {
+          temperature: 0,
+          ...(geminiSchema ? { responseMimeType: "application/json", responseSchema: geminiSchema } : {}),
+        },
       });
       return response.text;
     },
