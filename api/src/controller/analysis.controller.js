@@ -10,4 +10,18 @@ const analyze = async (req, res) => {
   res.status(status).json(json);
 };
 
-module.exports = { analyze };
+const applyImprovement = async (req, res) => {
+  const { id } = req.params;
+  const { address } = req.user;
+  const { title, severity, reason, how } = req.body;
+
+  const { json, status } = await analysis.applyImprovement({
+    id,
+    ownerAddress: address,
+    improvement: { title, severity, reason, how },
+  });
+
+  res.status(status).json(json);
+};
+
+module.exports = { analyze, applyImprovement };

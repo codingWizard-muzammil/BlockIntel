@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const { contract: contractController, analysis: analysisController } = require("../../controller");
 const { create, remove, update, call } = require("../../validation/contract.validation");
+const { applyImprovement } = require("../../validation/analysis.validation");
 const validate = require("../../middleware/validate.middleware");
 const auth = require("../../middleware/auth.middleware");
 
@@ -24,5 +25,8 @@ router
 router
   .route("/:id/analyze")
   .post(auth, validate(remove, "params"), analysisController.analyze);
+router
+  .route("/:id/improvements/apply")
+  .post(auth, validate(remove, "params"), validate(applyImprovement, "body"), analysisController.applyImprovement);
 
 module.exports = router;

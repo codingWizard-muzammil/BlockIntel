@@ -7,6 +7,7 @@ function serializeContract({ analyze, ...contract }) {
     ...contract,
     analysis: analyze?.analysis ?? null,
     analyzedAt: analyze?.analyzedAt ?? null,
+    appliedImprovements: analyze?.appliedImprovements ?? [],
   };
 }
 

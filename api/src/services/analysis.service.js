@@ -168,4 +168,99 @@ const analyzeContract = async ({ id, ownerAddress, force = false }) => {
   return { status: 200, json: { analysis } };
 };
 
-module.exports = { analyzeContract };
+// Only the "source" field matters here, but wrapping it in an object still
+// gets Gemini's schema-constrained decoding and keeps parseJson's fallback
+// (outermost {...} span) usable for the OpenAI-compatible providers.
+const APPLY_RESPONSE_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    source: {
+      type: Type.STRING,
+      description: "The complete, updated contract source with the improvement applied.",
+    },
+  },
+  required: ["source"],
+};
+
+const APPLY_JSON_SHAPE = `Respond with ONLY a single JSON object — no markdown, no code fences, no commentary — matching exactly this shape:
+{ "source": string }  // the complete, updated file — not a diff or snippet`;
+
+function buildApplyPrompt({ language, name, source, improvement }) {
+  return `You are a senior smart contract engineer. Apply ONE specific improvement to the ${language} contract named "${name}" below, then return the complete updated file.
+
+Improvement to apply: ${improvement.title}
+Reason: ${improvement.reason}
+How: ${improvement.how}
+
+Rules:
+- Make only the change(s) this improvement calls for — don't refactor, rename, or touch unrelated code.
+- Preserve the existing formatting and style of the rest of the file.
+- Return the ENTIRE file with the change applied, not a diff or a snippet.
+
+${APPLY_JSON_SHAPE}
+
+\`\`\`${language}
+${source}
+\`\`\``;
+}
+
+const applyImprovement = async ({ id, ownerAddress, improvement }) => {
+  const contract = await contractModel.findOne({ id });
+  if (!contract || contract.ownerAddress !== ownerAddress) {
+    return { status: 404, json: { message: "Contract not found" } };
+  }
+
+  let source;
+  try {
+    source = await fs.readFile(contract.source, "utf8");
+  } catch (error) {
+    logger.error("Failed to read contract file to apply improvement", {
+      error: error.message,
+      path: contract.source,
+    });
+    return { status: 404, json: { message: "Contract file not found on disk" } };
+  }
+
+  if (!source.trim()) {
+    return { status: 422, json: { message: "Nothing to improve — the contract is empty" } };
+  }
+
+  let parsed;
+  try {
+    const result = await generateJson({
+      prompt: buildApplyPrompt({ language: contract.language, name: contract.name, source, improvement }),
+      geminiSchema: APPLY_RESPONSE_SCHEMA,
+      requiredKeys: ["source"],
+    });
+    parsed = result.json;
+  } catch (error) {
+    logger.error("AI failed to apply improvement on every configured provider", {
+      error: error.message,
+      contractId: id,
+    });
+    return { status: 502, json: { message: "AI is temporarily unavailable — try again shortly" } };
+  }
+
+  const updatedSource = String(parsed.source ?? "").trim();
+  if (!updatedSource) {
+    return { status: 502, json: { message: "AI returned an empty result — try again" } };
+  }
+
+  await fs.writeFile(contract.source, updatedSource, "utf8");
+
+  // Recorded so the "Added to contract" state on this improvement survives
+  // a page reload instead of resetting to unclicked.
+  const existingAnalyze = await analyzeModel.findOne({ contractId: id });
+  const appliedImprovements = Array.from(
+    new Set([...(existingAnalyze?.appliedImprovements ?? []), improvement.title]),
+  );
+  await analyzeModel.upsert(
+    { contractId: id },
+    { contractId: id, appliedImprovements },
+    { appliedImprovements },
+  );
+
+  return { status: 200, json: { source: updatedSource, appliedImprovements } };
+};
+
+module.exports = { analyzeContract, applyImprovement };

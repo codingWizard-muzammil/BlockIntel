@@ -69,6 +69,11 @@ model analyze {
   analysis   Json?
   analyzedAt DateTime?
 
+  // Titles of improvements from `analysis.improvements` that have already
+  // been applied to this contract's source via the "Add this improvement"
+  // button — lets the UI show them as added again after a reload.
+  appliedImprovements String[] @default([])
+
   contract contracts @relation(fields: [contractId], references: [id], onDelete: Cascade)
 
   @@map("analyze")
