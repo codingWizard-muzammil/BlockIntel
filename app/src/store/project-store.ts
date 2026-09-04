@@ -333,9 +333,21 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   analyzeContract: async (contractId, force = false) => {
+    // Captured before the request so a compile that lands while the AI call
+    // is still in flight can be detected below — otherwise this response
+    // (built from the pre-compile compiler/gas snapshot) would land after
+    // and overwrite the freshly-compiled state with stale figures.
+    const compileGeneration = useEditorStore.getState().compileGeneration;
     useEditorStore.getState().setAnalyzing();
     try {
       const analysis = await analyzeContractRequest(contractId, force);
+      if (useEditorStore.getState().compileGeneration !== compileGeneration) {
+        // Stale — a compile completed while this request was in flight.
+        // Drop it silently rather than clobbering the newer state; the
+        // "Analyze" button is still there for the user to re-run it.
+        useEditorStore.setState({ analyzing: false });
+        return;
+      }
       useEditorStore.getState().setAnalysisResult(contractId, analysis);
     } catch (error) {
       useEditorStore.getState().setAnalysisError((error as Error).message);

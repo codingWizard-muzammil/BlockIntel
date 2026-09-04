@@ -195,6 +195,10 @@ function emptyContractLinkage() {
 
 function formatGasEstimate(raw: string | null | undefined) {
   if (!raw) return null;
+  // solc reports "infinite" for gasEstimates.creation.totalCost when the
+  // creation cost can't be statically bounded (e.g. loops/dynamic data in
+  // the constructor) — show that plainly instead of the raw solc string.
+  if (raw.toLowerCase() === "infinite") return "Unbounded";
   const num = Number(raw);
   return Number.isFinite(num) ? num.toLocaleString() : raw;
 }
@@ -258,6 +262,12 @@ type EditorState = {
   analyzedAt: string | null;
   analyzing: boolean;
   analysisError: string | null;
+  // Bumped on every successful compile. An in-flight analyze request that
+  // was fired before a compile completes carries compiler/gas figures baked
+  // in from the pre-compile state — capturing this counter before the
+  // request and checking it on response lets the caller drop that stale
+  // result instead of clobbering the fresher post-compile state with it.
+  compileGeneration: number;
   // Titles of improvements already applied to the active file's contract —
   // mirrors analysisContractId's file, kept in sync at the same points.
   appliedImprovements: string[];
@@ -321,6 +331,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   analyzedAt: null,
   analyzing: false,
   analysisError: null,
+  compileGeneration: 0,
   appliedImprovements: [],
 
   addFile: () => {
@@ -604,11 +615,15 @@ export const useEditorStore = create<EditorState>((set) => ({
                 // away to another tab and back doesn't lose it — see
                 // deriveCompileStatus.
                 dependencies: result.deployment?.ok ? (result.deployment.dependencies ?? []) : f.dependencies,
-                // The source just changed underneath it — drop the stale
-                // analysis so views show a loading state until the
-                // follow-up analyze call lands.
-                analysis: null,
-                analyzedAt: null,
+                // Compile and Analyze are separate, user-initiated actions
+                // (see compileContract in project-store) — no follow-up
+                // analyze call fires on its own, so the last AI analysis is
+                // left in place rather than blanked out here. It may now
+                // describe a slightly older version of the source, but
+                // that's better than losing the summary/attacks/improvements
+                // views until the user reloads or re-analyzes; the
+                // deterministic compiler/lines/gas fields are sourced live
+                // from compileStatus regardless (see ContractSummaryCard).
               };
             }
             // A dependency the constructor deployed itself (e.g. Vault's
@@ -630,8 +645,7 @@ export const useEditorStore = create<EditorState>((set) => ({
             return f;
           })
         : state.files,
-      analysis: result.ok && state.analysisContractId === contractId ? null : state.analysis,
-      analyzedAt: result.ok && state.analysisContractId === contractId ? null : state.analyzedAt,
+      compileGeneration: result.ok ? state.compileGeneration + 1 : state.compileGeneration,
       compileStatus: {
         solidityVersion: result.solidityVersion,
         ok: result.ok,
