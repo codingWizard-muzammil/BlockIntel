@@ -2,8 +2,8 @@ const path = require("node:path");
 const fs = require("node:fs/promises");
 const CorCrud = require("../utils/CorCrud");
 const logger = require("../utils/logger");
-const { LANGUAGE_EXTENSIONS } = require("../constants/chains");
 const { serializeContract } = require("../utils/serializeContract");
+const { contractPath } = require("../utils/contractFs");
 
 const contractModel = new CorCrud("contracts");
 const projectModel = new CorCrud("projects");
@@ -16,15 +16,7 @@ const createContract = async ({ projectId, name, language, source, ownerAddress 
   }
 
   const contractId = crypto.randomUUID();
-  const extension = LANGUAGE_EXTENSIONS[language.toLowerCase()];
-
-  const filePath = path.join(
-    __dirname,
-    "../../../contracts",
-    ownerAddress,
-    String(projectId),
-    `${contractId}.${extension}`,
-  );
+  const filePath = contractPath(ownerAddress, projectId, contractId, language);
 
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, source ?? "", "utf8");
@@ -53,8 +45,7 @@ const updateContract = async ({ id, ownerAddress, name, language, source }) => {
 
   let sourcePath = contract.source;
   if (language !== undefined && language !== contract.language) {
-    const extension = LANGUAGE_EXTENSIONS[language.toLowerCase()];
-    const newPath = `${sourcePath.slice(0, sourcePath.lastIndexOf("."))}.${extension}`;
+    const newPath = contractPath(ownerAddress, contract.projectId, id, language);
     await fs.rename(sourcePath, newPath);
     sourcePath = newPath;
     data.language = language;

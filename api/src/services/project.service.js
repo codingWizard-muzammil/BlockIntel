@@ -3,6 +3,7 @@ const CorCrud = require("../utils/CorCrud");
 const fs = require("node:fs/promises");
 const { CHAIN_LANGUAGES, LANGUAGE_EXTENSIONS } = require("../constants/chains");
 const { serializeContract } = require("../utils/serializeContract");
+const { contractPath, projectDir } = require("../utils/contractFs");
 
 const projectModel = new CorCrud("projects");
 const contractModel = new CorCrud("contracts");
@@ -35,14 +36,7 @@ const createProject = async ({
   const contractId = crypto.randomUUID();
   const language = defaultLanguageForChain(chain);
   const extension = LANGUAGE_EXTENSIONS[language.toLowerCase()];
-
-  const filePath = path.join(
-    __dirname,
-    "../../../contracts",
-    ownerAddress,
-    String(project.id),
-    `${contractId}.${extension}`,
-  );
+  const filePath = contractPath(ownerAddress, project.id, contractId, language);
 
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, "", "utf8");
@@ -98,14 +92,7 @@ const deleteProject = async ({ id, ownerAddress }) => {
     return { status: 404, json: { message: "Project not found" } };
   }
 
-  const projectPath = path.join(
-    __dirname,
-    "../../../contracts",
-    ownerAddress,
-    id,
-  );
-
-  await fs.rm(projectPath, { force: true, recursive: true });
+  await fs.rm(projectDir(ownerAddress, id), { force: true, recursive: true });
 
   return { status: 200, json: { message: "Project deleted" } };
 };
