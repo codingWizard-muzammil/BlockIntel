@@ -4,9 +4,11 @@ import type { ContractSummary } from "@/types/analysis";
 
 function Row({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex items-start justify-between border-b border-border-muted py-4 last:border-0">
-      <span className="text-sm text-muted">{label}</span>
-      <span className="text-sm font-medium text-ink">{value}</span>
+    <div className="flex items-start justify-between gap-3 border-b border-border-muted py-4 last:border-0">
+      <span className="shrink-0 text-sm text-muted">{label}</span>
+      <span className="min-w-0 text-right text-sm font-medium wrap-break-word text-ink">
+        {value}
+      </span>
     </div>
   );
 }

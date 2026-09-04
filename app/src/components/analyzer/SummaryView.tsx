@@ -66,7 +66,7 @@ export function SummaryView() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-6 lg:flex-row">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <ContractSummaryCard
             summary={analysis?.summary ?? null}
             analyzedAt={analyzedAt}
@@ -81,7 +81,7 @@ export function SummaryView() {
             }
           />
         </div>
-        <div className="flex shrink-0 flex-col gap-6 lg:w-75">
+        <div className="flex min-w-0 shrink-0 flex-col gap-6 lg:w-75">
           <KeyFeaturesCard
             features={analysis?.keyFeatures ?? []}
             notAnalyzed={notAnalyzed}

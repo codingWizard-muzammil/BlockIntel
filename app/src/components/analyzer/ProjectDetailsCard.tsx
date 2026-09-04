@@ -19,15 +19,19 @@ export function ProjectDetailsCard({ project }: { project: ApiProject }) {
       </CardHeading>
       <div className="flex flex-col gap-3">
         {rows.map(([label, value]) => (
-          <div key={label} className="flex items-start justify-between gap-2">
-            <span className="text-sm text-muted">{label}</span>
-            <span className="text-sm text-ink">{value}</span>
+          <div key={label} className="flex items-start justify-between gap-3">
+            <span className="shrink-0 text-sm text-muted">{label}</span>
+            <span className="min-w-0 text-right text-sm wrap-break-word text-ink">
+              {value}
+            </span>
           </div>
         ))}
         {project.description && (
           <div className="flex flex-col gap-1 border-t border-border-muted pt-3">
             <span className="text-sm text-muted">Description</span>
-            <span className="text-sm text-ink">{project.description}</span>
+            <span className="text-sm wrap-break-word text-ink">
+              {project.description}
+            </span>
           </div>
         )}
       </div>
