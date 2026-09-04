@@ -15,8 +15,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const status = useAuthStore((s) => s.status);
-  const checkAuth = useAuthStore((s) => s.checkAuth);
+  const { status, checkAuth } = useAuthStore();
 
   useEffect(() => {
     checkAuth();

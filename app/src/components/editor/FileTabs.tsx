@@ -87,12 +87,10 @@ function FileTab({
   onCreate: (file: EditorFile, name: string) => void;
   onRequestDelete: (file: EditorFile) => void;
 }) {
-  const activeFileId = useEditorStore((s) => s.activeFileId);
-  const setActiveFile = useEditorStore((s) => s.setActiveFile);
-  const setFileName = useEditorStore((s) => s.setFileName);
-  const setFileLanguage = useEditorStore((s) => s.setFileLanguage);
-  const fileCount = useEditorStore((s) => s.files.length);
-  const updateContractMeta = useProjectStore((s) => s.updateContractMeta);
+  const { activeFileId, setActiveFile, setFileName, setFileLanguage, files } =
+    useEditorStore();
+  const { updateContractMeta } = useProjectStore();
+  const fileCount = files.length;
 
   const isActive = file.id === activeFileId;
   const multiLanguage = languages.length > 1;

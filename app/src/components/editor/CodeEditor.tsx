@@ -328,14 +328,15 @@ const beforeMount: BeforeMount = (monaco) => {
 
 export function CodeEditor() {
   const { source, setSource, language, activeFileId } = useEditorStore();
-  const updateContract = useProjectStore((s) => s.updateContract);
-  const saveContract = useProjectStore((s) => s.saveContract);
-  const resolvedTheme = usePreferencesStore((s) => s.resolvedTheme);
-  const editorFontSize = usePreferencesStore((s) => s.editorFontSize);
-  const editorWordWrap = usePreferencesStore((s) => s.editorWordWrap);
-  const editorTabSize = usePreferencesStore((s) => s.editorTabSize);
-  const editorMinimap = usePreferencesStore((s) => s.editorMinimap);
-  const editorColors = usePreferencesStore((s) => s.editorColors);
+  const { updateContract, saveContract } = useProjectStore();
+  const {
+    resolvedTheme,
+    editorFontSize,
+    editorWordWrap,
+    editorTabSize,
+    editorMinimap,
+    editorColors,
+  } = usePreferencesStore();
   const monacoRef = useRef<Monaco | null>(null);
 
   const handleMount: OnMount = (_editor, monaco) => {

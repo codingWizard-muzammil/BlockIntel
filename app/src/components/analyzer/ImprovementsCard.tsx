@@ -15,10 +15,11 @@ function ImprovementItem({ improvement }: { improvement: Improvement }) {
   // Not compileStatus.contractId — that's null until the contract has been
   // compiled at least once, but an improvement can be applied to a contract
   // that's only ever been analyzed.
-  const contractId = useEditorStore((s) => s.analysisContractId);
+  const { analysisContractId: contractId, appliedImprovements } =
+    useEditorStore();
   // Persisted server-side — survives a reload, unlike `state` below.
-  const applied = useEditorStore((s) => s.appliedImprovements.includes(improvement.title));
-  const applyImprovement = useProjectStore((s) => s.applyImprovement);
+  const applied = appliedImprovements.includes(improvement.title);
+  const { applyImprovement } = useProjectStore();
   const [state, setState] = useState<ApplyState>("idle");
 
   const handleAdd = async () => {

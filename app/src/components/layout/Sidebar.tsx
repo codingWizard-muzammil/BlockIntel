@@ -13,8 +13,7 @@ const bottomItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { activeProjectId, projects } = useProjectStore();
-  const restore = useProjectStore((s) => s.restore);
+  const { activeProjectId, projects, restore } = useProjectStore();
 
   useEffect(() => {
     restore();

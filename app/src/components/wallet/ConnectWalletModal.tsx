@@ -46,9 +46,7 @@ export function ConnectWalletModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const status = useAuthStore((s) => s.status);
-  const error = useAuthStore((s) => s.connectError);
-  const connectWallet = useAuthStore((s) => s.connectWallet);
+  const { status, connectError: error, connectWallet } = useAuthStore();
 
   const [wallets, setWallets] = useState<WalletProviderDetail[] | null>(null);
   const [connectingId, setConnectingId] = useState<string | null>(null);

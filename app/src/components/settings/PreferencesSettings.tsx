@@ -134,19 +134,21 @@ function ColorField({
 }
 
 export function PreferencesSettings() {
-  const theme = usePreferencesStore((s) => s.theme);
-  const setTheme = usePreferencesStore((s) => s.setTheme);
-  const editorFontSize = usePreferencesStore((s) => s.editorFontSize);
-  const setEditorFontSize = usePreferencesStore((s) => s.setEditorFontSize);
-  const editorWordWrap = usePreferencesStore((s) => s.editorWordWrap);
-  const setEditorWordWrap = usePreferencesStore((s) => s.setEditorWordWrap);
-  const editorTabSize = usePreferencesStore((s) => s.editorTabSize);
-  const setEditorTabSize = usePreferencesStore((s) => s.setEditorTabSize);
-  const editorMinimap = usePreferencesStore((s) => s.editorMinimap);
-  const setEditorMinimap = usePreferencesStore((s) => s.setEditorMinimap);
-  const editorColors = usePreferencesStore((s) => s.editorColors);
-  const setEditorColor = usePreferencesStore((s) => s.setEditorColor);
-  const resetEditorColors = usePreferencesStore((s) => s.resetEditorColors);
+  const {
+    theme,
+    setTheme,
+    editorFontSize,
+    setEditorFontSize,
+    editorWordWrap,
+    setEditorWordWrap,
+    editorTabSize,
+    setEditorTabSize,
+    editorMinimap,
+    setEditorMinimap,
+    editorColors,
+    setEditorColor,
+    resetEditorColors,
+  } = usePreferencesStore();
 
   return (
     <div className="flex flex-col gap-6">

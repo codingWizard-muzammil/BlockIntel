@@ -28,17 +28,17 @@ function ContractWorkspace({
   project: ApiProject;
   children: ReactNode;
 }) {
-  const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
-  const fetchContractSource = useProjectStore((s) => s.fetchContractSource);
-  const setLockedChain = useEditorStore((s) => s.setLockedChain);
-  const setFilesFromContracts = useEditorStore((s) => s.setFilesFromContracts);
-  const hydrateFileSource = useEditorStore((s) => s.hydrateFileSource);
-  const activeContractId = useEditorStore(
-    (s) => s.files.find((f) => f.id === s.activeFileId)?.contractId ?? null,
-  );
-  const activeSourceEmpty = useEditorStore(
-    (s) => !s.files.find((f) => f.id === s.activeFileId)?.source,
-  );
+  const { setActiveProjectId, fetchContractSource } = useProjectStore();
+  const {
+    setLockedChain,
+    setFilesFromContracts,
+    hydrateFileSource,
+    files,
+    activeFileId,
+  } = useEditorStore();
+  const activeFile = files.find((f) => f.id === activeFileId);
+  const activeContractId = activeFile?.contractId ?? null;
+  const activeSourceEmpty = !activeFile?.source;
   const hydratedContractIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {

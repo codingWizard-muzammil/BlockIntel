@@ -8,9 +8,7 @@ function describeDelete(project: ApiProject) {
 }
 
 export function useDeleteProjectFlow() {
-  const deleteProject = useProjectStore((s) => s.deleteProject);
-  const deleteStatus = useProjectStore((s) => s.deleteStatus);
-  const deleteError = useProjectStore((s) => s.deleteError);
+  const { deleteProject, deleteStatus, deleteError } = useProjectStore();
   const [pendingDelete, setPendingDelete] = useState<ApiProject | null>(null);
 
   const isPending = deleteStatus === "loading";

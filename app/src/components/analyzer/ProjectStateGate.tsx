@@ -28,12 +28,9 @@ export function ProjectStateGate({
   projectId: string;
   children: (project: ApiProject) => ReactNode;
 }) {
-  const authStatus = useAuthStore((s) => s.status);
-  const fetchProject = useProjectStore((s) => s.fetchProject);
-  const project = useProjectStore((s) =>
-    s.projects.find((p) => p.id === projectId),
-  );
-  const projectStatus = useProjectStore((s) => s.projectStatus);
+  const { status: authStatus } = useAuthStore();
+  const { fetchProject, projects, projectStatus } = useProjectStore();
+  const project = projects.find((p) => p.id === projectId);
 
   useEffect(() => {
     if (authStatus === "connected") fetchProject(projectId);

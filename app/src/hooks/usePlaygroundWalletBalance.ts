@@ -21,7 +21,7 @@ export function usePlaygroundWalletBalance(
   contractId: string | null,
   onBalance: (balance: string) => void,
 ) {
-  const token = useAuthStore((s) => s.accessToken);
+  const { accessToken: token } = useAuthStore();
   const onBalanceRef = useRef(onBalance);
 
   useEffect(() => {

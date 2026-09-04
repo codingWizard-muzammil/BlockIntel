@@ -9,8 +9,7 @@ import { usePreferencesStore } from "@/store/preferences-store";
 import { WalletControl } from "../wallet/WalletControl";
 
 export function Header() {
-  const resolvedTheme = usePreferencesStore((s) => s.resolvedTheme);
-  const setTheme = usePreferencesStore((s) => s.setTheme);
+  const { resolvedTheme, setTheme } = usePreferencesStore();
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-canvas px-4">

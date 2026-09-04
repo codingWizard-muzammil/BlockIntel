@@ -10,8 +10,7 @@ import { Dropdown } from "@/components/ui/Dropdown";
 export function ProjectSwitcher() {
   const router = useRouter();
   const { id: activeProjectId } = useParams<{ id: string }>();
-  const projects = useProjectStore((s) => s.projects);
-  const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
+  const { projects, setActiveProjectId } = useProjectStore();
   const activeProject = projects.find((p) => p.id === activeProjectId);
 
   const [modalOpen, setModalOpen] = useState(false);

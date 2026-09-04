@@ -26,7 +26,7 @@ function ChainBadge({
 }
 
 function AutosaveIndicator() {
-  const status = useProjectStore((s) => s.autosaveStatus);
+  const { autosaveStatus: status } = useProjectStore();
 
   if (status === "idle") return null;
 

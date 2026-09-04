@@ -12,11 +12,9 @@ import { Button } from "@/components/ui/Button";
 import { useDeleteProjectFlow } from "@/hooks/useDeleteProjectFlow";
 
 export default function HistoryPage() {
-  const authStatus = useAuthStore((s) => s.status);
-  const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
-  const projects = useProjectStore((s) => s.projects);
-  const projectsStatus = useProjectStore((s) => s.projectsStatus);
-  const fetchProjects = useProjectStore((s) => s.fetchProjects);
+  const { status: authStatus } = useAuthStore();
+  const { setActiveProjectId, projects, projectsStatus, fetchProjects } =
+    useProjectStore();
   const [modalOpen, setModalOpen] = useState(false);
   const { requestDelete, dialogProps } = useDeleteProjectFlow();
 

@@ -7,10 +7,9 @@ import { useEditorStore, type EditorFile } from "@/store/editor-store";
 // FileTabs only renders a close/delete button once more than one file is
 // open, so `closeFile`'s own last-tab guard never actually fires here.
 export function useDeleteContractFlow() {
-  const deleteContract = useProjectStore((s) => s.deleteContract);
-  const deleteContractStatus = useProjectStore((s) => s.deleteContractStatus);
-  const deleteContractError = useProjectStore((s) => s.deleteContractError);
-  const closeFile = useEditorStore((s) => s.closeFile);
+  const { deleteContract, deleteContractStatus, deleteContractError } =
+    useProjectStore();
+  const { closeFile } = useEditorStore();
   const [pendingDelete, setPendingDelete] = useState<EditorFile | null>(null);
 
   const isPending = deleteContractStatus === "loading";

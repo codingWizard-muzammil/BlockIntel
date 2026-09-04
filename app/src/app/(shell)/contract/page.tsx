@@ -11,8 +11,7 @@ import { useProjectStore } from "@/store/project-store";
 
 export default function ContractIndexPage() {
   const router = useRouter();
-  const projects = useProjectStore((s) => s.projects);
-  const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
+  const { projects, setActiveProjectId } = useProjectStore();
   const [projectModalOpen, setProjectModalOpen] = useState(false);
 
   function handleSelectProject(id: string) {

@@ -18,15 +18,17 @@ function countLinesOfCode(source: string) {
 }
 
 export function SummaryView() {
-  const compiled = useEditorStore((s) => s.compileStatus.ok);
-  const compileStatus = useEditorStore((s) => s.compileStatus);
-  const activeSource = useEditorStore(
-    (s) => s.files.find((f) => f.id === s.activeFileId)?.source ?? "",
-  );
-  const analyzing = useEditorStore((s) => s.analyzing);
-  const analysisError = useEditorStore((s) => s.analysisError);
-  const analysis = useEditorStore((s) => s.analysis);
-  const analyzedAt = useEditorStore((s) => s.analyzedAt);
+  const {
+    compileStatus,
+    analyzing,
+    analysisError,
+    analysis,
+    analyzedAt,
+    files,
+    activeFileId,
+  } = useEditorStore();
+  const compiled = compileStatus.ok;
+  const activeSource = files.find((f) => f.id === activeFileId)?.source ?? "";
   const project = useGatedProject();
 
   if (!compiled && !analysis) {
@@ -80,16 +82,25 @@ export function SummaryView() {
           />
         </div>
         <div className="flex shrink-0 flex-col gap-6 lg:w-75">
-          <KeyFeaturesCard features={analysis?.keyFeatures ?? []} notAnalyzed={notAnalyzed} />
+          <KeyFeaturesCard
+            features={analysis?.keyFeatures ?? []}
+            notAnalyzed={notAnalyzed}
+          />
           <ProjectDetailsCard project={project} />
         </div>
       </div>
       <div className="flex flex-col gap-6 lg:flex-row">
         <div className="flex-1">
-          <PotentialAttacksCard attacks={analysis?.attacks ?? []} notAnalyzed={notAnalyzed} />
+          <PotentialAttacksCard
+            attacks={analysis?.attacks ?? []}
+            notAnalyzed={notAnalyzed}
+          />
         </div>
         <div className="flex-1">
-          <ImprovementsCard improvements={analysis?.improvements ?? []} notAnalyzed={notAnalyzed} />
+          <ImprovementsCard
+            improvements={analysis?.improvements ?? []}
+            notAnalyzed={notAnalyzed}
+          />
         </div>
       </div>
     </div>

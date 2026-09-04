@@ -37,7 +37,7 @@ function FunctionCard({
   fragment: AbiFragment;
   onBalanceChange: (balance: string) => void;
 }) {
-  const callContractFunction = useProjectStore((s) => s.callContractFunction);
+  const { callContractFunction } = useProjectStore();
   const [values, setValues] = useState<string[]>(() => fragment.inputs.map(() => ""));
   const [ethValue, setEthValue] = useState("");
   const [loading, setLoading] = useState(false);
@@ -118,10 +118,9 @@ function FunctionCard({
 }
 
 export function PlaygroundView() {
-  const status = useEditorStore((s) => s.compileStatus);
-  const activeContractId = useEditorStore(
-    (s) => s.files.find((f) => f.id === s.activeFileId)?.contractId ?? null,
-  );
+  const { compileStatus: status, files, activeFileId } = useEditorStore();
+  const activeContractId =
+    files.find((f) => f.id === activeFileId)?.contractId ?? null;
 
   if (status.unsupported) {
     return (
@@ -169,10 +168,9 @@ export function PlaygroundView() {
 // project — its own playground already reflects the same deployed address
 // (see setCompileResult), so this just jumps there.
 function DependencyRow({ dependency }: { dependency: DeployedDependency }) {
-  const setActiveFile = useEditorStore((s) => s.setActiveFile);
-  const fileId = useEditorStore(
-    (s) => s.files.find((f) => f.contractId === dependency.contractId)?.id ?? null,
-  );
+  const { setActiveFile, files } = useEditorStore();
+  const fileId =
+    files.find((f) => f.contractId === dependency.contractId)?.id ?? null;
 
   const content = (
     <>
@@ -210,7 +208,7 @@ function PlaygroundBody({
   deployment: DeploymentResult | null;
   abi: AbiFragment[];
 }) {
-  const fetchPlaygroundWallet = useProjectStore((s) => s.fetchPlaygroundWallet);
+  const { fetchPlaygroundWallet } = useProjectStore();
   const [wallet, setWallet] = useState<PlaygroundWallet | null>(null);
   const [minting, setMinting] = useState(false);
   const [mintError, setMintError] = useState<string | null>(null);

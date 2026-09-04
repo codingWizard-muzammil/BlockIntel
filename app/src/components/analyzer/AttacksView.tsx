@@ -6,10 +6,9 @@ import { ComingSoon } from "@/components/ui/ComingSoon";
 import { useEditorStore } from "@/store/editor-store";
 
 export function AttacksView() {
-  const compiled = useEditorStore((s) => s.compileStatus.ok);
-  const analyzing = useEditorStore((s) => s.analyzing);
-  const analysisError = useEditorStore((s) => s.analysisError);
-  const analysis = useEditorStore((s) => s.analysis);
+  const { compileStatus, analyzing, analysisError, analysis } =
+    useEditorStore();
+  const compiled = compileStatus.ok;
 
   if (!compiled && !analysis) {
     return (

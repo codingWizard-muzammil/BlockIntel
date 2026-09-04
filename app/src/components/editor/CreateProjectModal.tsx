@@ -20,10 +20,8 @@ export function CreateProjectModal({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
-  const createProject = useProjectStore((s) => s.createProject);
-  const createStatus = useProjectStore((s) => s.createStatus);
-  const createError = useProjectStore((s) => s.createError);
+  const { setActiveProjectId, createProject, createStatus, createError } =
+    useProjectStore();
   const [name, setName] = useState("");
   const [chain, setChain] = useState(initialChain);
   const [purpose, setPurpose] = useState("");

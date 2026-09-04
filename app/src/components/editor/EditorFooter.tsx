@@ -16,18 +16,19 @@ import { useProjectStore } from "@/store/project-store";
 import { redirect, usePathname } from "next/navigation";
 
 export function EditorFooter() {
-  const status = useEditorStore((s) => s.compileStatus);
-  const compiling = useEditorStore((s) => s.compiling);
-  const compileError = useEditorStore((s) => s.compileError);
-  const analyzing = useEditorStore((s) => s.analyzing);
-  const activeFile = useEditorStore(
-    (s) => s.files.find((f) => f.id === s.activeFileId) ?? null,
-  );
-  const { clearSource, formatSource } = useEditorStore();
-  const compileContract = useProjectStore((s) => s.compileContract);
-  const analyzeContract = useProjectStore((s) => s.analyzeContract);
-  const saveContract = useProjectStore((s) => s.saveContract);
-  const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const {
+    compileStatus: status,
+    compiling,
+    compileError,
+    analyzing,
+    files,
+    activeFileId,
+    clearSource,
+    formatSource,
+  } = useEditorStore();
+  const { compileContract, analyzeContract, saveContract, activeProjectId } =
+    useProjectStore();
+  const activeFile = files.find((f) => f.id === activeFileId) ?? null;
 
   const failureMessage = compileError ?? status.errors[0]?.message ?? null;
 
