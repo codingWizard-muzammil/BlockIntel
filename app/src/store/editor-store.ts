@@ -133,6 +133,10 @@ export type EditorFile = {
   // written by setAnalysisResult after an in-session analyze call).
   analysis: AnalysisResult | null;
   analyzedAt: string | null;
+  // Titles of improvements already applied via "Add this improvement"
+  // (from the DB on load, or written by setAppliedImprovements after an
+  // in-session apply call) — survives a page reload.
+  appliedImprovements: string[];
 };
 
 function createFileId() {
@@ -185,6 +189,7 @@ function emptyContractLinkage() {
     dependencies: null,
     analysis: null,
     analyzedAt: null,
+    appliedImprovements: [],
   };
 }
 
@@ -253,6 +258,9 @@ type EditorState = {
   analyzedAt: string | null;
   analyzing: boolean;
   analysisError: string | null;
+  // Titles of improvements already applied to the active file's contract —
+  // mirrors analysisContractId's file, kept in sync at the same points.
+  appliedImprovements: string[];
 
   addFile: () => string;
   setActiveFile: (id: string) => void;
@@ -266,6 +274,7 @@ type EditorState = {
   setPanelWidth: (width: number) => void;
   setSource: (source: string) => void;
   hydrateFileSource: (fileId: string, source: string) => void;
+  setSourceForContract: (contractId: string, source: string) => void;
   clearSource: () => void;
   formatSource: () => void;
   setCompiling: () => void;
@@ -274,6 +283,7 @@ type EditorState = {
   setAnalyzing: () => void;
   setAnalysisResult: (contractId: string, analysis: AnalysisResult) => void;
   setAnalysisError: (message: string) => void;
+  setAppliedImprovements: (contractId: string, appliedImprovements: string[]) => void;
 };
 
 const initialCompileStatus: CompileStatus = {
@@ -311,6 +321,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   analyzedAt: null,
   analyzing: false,
   analysisError: null,
+  appliedImprovements: [],
 
   addFile: () => {
     const id = createFileId();
@@ -361,6 +372,7 @@ export const useEditorStore = create<EditorState>((set) => ({
         analyzedAt: file.analyzedAt,
         analyzing: false,
         analysisError: null,
+        appliedImprovements: file.appliedImprovements,
       };
     }),
 
@@ -434,6 +446,7 @@ export const useEditorStore = create<EditorState>((set) => ({
               compiledAt: contract.compiledAt,
               analysis: contract.analysis,
               analyzedAt: contract.analyzedAt,
+              appliedImprovements: contract.appliedImprovements,
             }
           : f,
       ),
@@ -471,6 +484,7 @@ export const useEditorStore = create<EditorState>((set) => ({
               dependencies: null,
               analysis: c.analysis,
               analyzedAt: c.analyzedAt,
+              appliedImprovements: c.appliedImprovements,
             }))
           : [
               {
@@ -496,6 +510,7 @@ export const useEditorStore = create<EditorState>((set) => ({
         analyzedAt: active.analyzedAt,
         analyzing: false,
         analysisError: null,
+        appliedImprovements: active.appliedImprovements,
       };
     }),
 
@@ -539,6 +554,20 @@ export const useEditorStore = create<EditorState>((set) => ({
       source: "",
       files: state.files.map((f) =>
         f.id === state.activeFileId ? { ...f, source: "" } : f,
+      ),
+    })),
+
+  // Overwrites a contract's source after a server-side rewrite (e.g. the AI
+  // applying an improvement) — distinct from setSource since it's not a
+  // user edit made from the active tab, and the file it targets may not
+  // even be the active one.
+  setSourceForContract: (contractId, source) =>
+    set((state) => ({
+      source: state.files.find((f) => f.id === state.activeFileId)?.contractId === contractId
+        ? source
+        : state.source,
+      files: state.files.map((f) =>
+        f.contractId === contractId ? { ...f, source } : f,
       ),
     })),
 
@@ -643,4 +672,15 @@ export const useEditorStore = create<EditorState>((set) => ({
     }),
 
   setAnalysisError: (message) => set({ analyzing: false, analysisError: message }),
+
+  setAppliedImprovements: (contractId, appliedImprovements) =>
+    set((state) => ({
+      appliedImprovements:
+        state.files.find((f) => f.id === state.activeFileId)?.contractId === contractId
+          ? appliedImprovements
+          : state.appliedImprovements,
+      files: state.files.map((f) =>
+        f.contractId === contractId ? { ...f, appliedImprovements } : f,
+      ),
+    })),
 }));

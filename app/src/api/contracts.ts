@@ -20,6 +20,9 @@ export type ApiContract = {
   // called at least once for this contract, null until then.
   analysis: AnalysisResult | null;
   analyzedAt: string | null;
+  // Titles of improvements already applied via "Add this improvement" —
+  // lets that button show as already-added after a reload.
+  appliedImprovements: string[];
 };
 
 export type CreateContractInput = {
@@ -174,4 +177,16 @@ export async function analyzeContractRequest(id: string, force = false) {
     force,
   });
   return data.analysis;
+}
+
+// Has the AI rewrite the contract's source to apply one specific
+// improvement, and persists both the result and the applied-improvements
+// list server-side — the returned source is the new source of truth for
+// this contract's file on disk.
+export async function applyImprovementRequest(id: string, improvement: Improvement) {
+  const { data } = await apiClient.post<{ source: string; appliedImprovements: string[] }>(
+    `/contracts/${id}/improvements/apply`,
+    improvement,
+  );
+  return data;
 }

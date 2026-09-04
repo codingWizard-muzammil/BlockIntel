@@ -19,6 +19,7 @@ import {
   updateContractMetaRequest,
   compileContractRequest,
   analyzeContractRequest,
+  applyImprovementRequest,
   callContractFunctionRequest,
   fetchPlaygroundWalletRequest,
   type ApiContract,
@@ -28,6 +29,7 @@ import {
   type CallFunctionResult,
   type PlaygroundWallet,
 } from "@/api/contracts";
+import type { Improvement } from "@/types/analysis";
 import { useEditorStore } from "./editor-store";
 
 export type { ApiProject };
@@ -87,6 +89,7 @@ type ProjectState = {
   deleteContract: (contractId: string, projectId: string) => Promise<boolean>;
   compileContract: (contractId: string) => Promise<void>;
   analyzeContract: (contractId: string, force?: boolean) => Promise<void>;
+  applyImprovement: (contractId: string, improvement: Improvement) => Promise<boolean>;
   callContractFunction: (
     contractId: string,
     input: CallFunctionInput,
@@ -336,6 +339,23 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       useEditorStore.getState().setAnalysisResult(contractId, analysis);
     } catch (error) {
       useEditorStore.getState().setAnalysisError((error as Error).message);
+    }
+  },
+
+  // Has the AI rewrite the contract's source to apply one improvement and
+  // persist it server-side, then reflects the new source in the editor.
+  // Returns whether it succeeded so the calling card can show its own
+  // per-item loading/error state.
+  applyImprovement: async (contractId, improvement) => {
+    try {
+      const { source, appliedImprovements } = await applyImprovementRequest(contractId, improvement);
+      lastSavedSourceByContract.set(contractId, source);
+      useEditorStore.getState().setSourceForContract(contractId, source);
+      useEditorStore.getState().setAppliedImprovements(contractId, appliedImprovements);
+      return true;
+    } catch (error) {
+      console.error("Failed to apply improvement", error);
+      return false;
     }
   },
 
