@@ -92,13 +92,6 @@ export function ImprovementsCard({
               <ImprovementItem key={improvement.title} improvement={improvement} />
             ))}
           </div>
-          <a
-            href="#"
-            className="mt-4 flex items-center gap-2 text-sm text-accent hover:underline"
-          >
-            View more suggestions
-            <ArrowRight className="size-3" />
-          </a>
         </>
       ) : (
         <p className="text-sm text-muted">

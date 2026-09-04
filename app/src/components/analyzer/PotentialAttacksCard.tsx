@@ -32,13 +32,6 @@ export function PotentialAttacksCard({
               <AttackItem key={attack.title} attack={attack} index={i + 1} />
             ))}
           </div>
-          <a
-            href="#"
-            className="mt-4 flex items-center gap-2 text-sm text-accent hover:underline"
-          >
-            View all attack scenarios
-            <ArrowRight className="size-3" />
-          </a>
         </>
       ) : (
         <p className="text-sm text-muted">

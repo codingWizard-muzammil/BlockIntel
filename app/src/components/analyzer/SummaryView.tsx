@@ -89,20 +89,6 @@ export function SummaryView() {
           <ProjectDetailsCard project={project} />
         </div>
       </div>
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <div className="flex-1">
-          <PotentialAttacksCard
-            attacks={analysis?.attacks ?? []}
-            notAnalyzed={notAnalyzed}
-          />
-        </div>
-        <div className="flex-1">
-          <ImprovementsCard
-            improvements={analysis?.improvements ?? []}
-            notAnalyzed={notAnalyzed}
-          />
-        </div>
-      </div>
     </div>
   );
 }
