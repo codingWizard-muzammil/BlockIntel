@@ -29,7 +29,7 @@ export function SummaryView() {
   const analyzedAt = useEditorStore((s) => s.analyzedAt);
   const project = useGatedProject();
 
-  if (!compiled) {
+  if (!compiled && !analysis) {
     return (
       <ComingSoon
         icon={LayoutGrid}

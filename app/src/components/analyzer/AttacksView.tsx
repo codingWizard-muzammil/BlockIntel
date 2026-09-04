@@ -11,7 +11,7 @@ export function AttacksView() {
   const analysisError = useEditorStore((s) => s.analysisError);
   const analysis = useEditorStore((s) => s.analysis);
 
-  if (!compiled) {
+  if (!compiled && !analysis) {
     return (
       <ComingSoon
         icon={ShieldAlert}
