@@ -6,6 +6,7 @@ import type {
   AnalysisResult,
   CompileDiagnostic,
   CompileResult,
+  DeployedDependency,
   DeploymentResult,
 } from "@/api/contracts";
 
@@ -123,6 +124,11 @@ export type EditorFile = {
   compilerVersion: string | null;
   gasEstimate: string | null;
   compiledAt: string | null;
+  // Other contracts this one's constructor deployed itself (from the last
+  // successful compile in this session) — not persisted server-side, so
+  // it's lost on a full reload, but survives switching tabs and back (see
+  // deriveCompileStatus).
+  dependencies: DeployedDependency[] | null;
   // Cached result of this file's last AI analysis (from the DB on load, or
   // written by setAnalysisResult after an in-session analyze call).
   analysis: AnalysisResult | null;
@@ -176,6 +182,7 @@ function emptyContractLinkage() {
     compilerVersion: null,
     gasEstimate: null,
     compiledAt: null,
+    dependencies: null,
     analysis: null,
     analyzedAt: null,
   };
@@ -213,7 +220,15 @@ function deriveCompileStatus(file: EditorFile, chain: string): CompileStatus | n
     errors: [],
     warnings: [],
     deployment: file.address
-      ? { ok: true, address: file.address, chain, rpcUrl: null, deployer: null, error: null }
+      ? {
+          ok: true,
+          address: file.address,
+          chain,
+          rpcUrl: null,
+          deployer: null,
+          error: null,
+          dependencies: file.dependencies ?? undefined,
+        }
       : null,
   };
 }
@@ -453,6 +468,7 @@ export const useEditorStore = create<EditorState>((set) => ({
               compilerVersion: c.compilerVersion,
               gasEstimate: formatGasEstimate(c.gasEstimate),
               compiledAt: c.compiledAt,
+              dependencies: null,
               analysis: c.analysis,
               analyzedAt: c.analyzedAt,
             }))
@@ -544,25 +560,46 @@ export const useEditorStore = create<EditorState>((set) => ({
       compiling: false,
       compileError: null,
       files: result.ok
-        ? state.files.map((f) =>
-            f.contractId === contractId
-              ? {
-                  ...f,
-                  abi: result.abi ?? null,
-                  compilerVersion: result.solidityVersion,
-                  gasEstimate: result.gas ?? null,
-                  compiledAt: new Date().toISOString(),
-                  address: result.deployment?.ok
-                    ? (result.deployment.address ?? f.address)
-                    : f.address,
-                  // The source just changed underneath it — drop the stale
-                  // analysis so views show a loading state until the
-                  // follow-up analyze call lands.
-                  analysis: null,
-                  analyzedAt: null,
-                }
-              : f,
-          )
+        ? state.files.map((f) => {
+            if (f.contractId === contractId) {
+              return {
+                ...f,
+                abi: result.abi ?? null,
+                compilerVersion: result.solidityVersion,
+                gasEstimate: result.gas ?? null,
+                compiledAt: new Date().toISOString(),
+                address: result.deployment?.ok
+                  ? (result.deployment.address ?? f.address)
+                  : f.address,
+                // Kept on the file (not just compileStatus) so switching
+                // away to another tab and back doesn't lose it — see
+                // deriveCompileStatus.
+                dependencies: result.deployment?.ok ? (result.deployment.dependencies ?? []) : f.dependencies,
+                // The source just changed underneath it — drop the stale
+                // analysis so views show a loading state until the
+                // follow-up analyze call lands.
+                analysis: null,
+                analyzedAt: null,
+              };
+            }
+            // A dependency the constructor deployed itself (e.g. Vault's
+            // `new Strategy(...)`) may be another open tab — update its
+            // playground state too, right away. Its own source didn't
+            // change, so its analysis stays valid and is left alone.
+            const dependency = result.deployment?.dependencies?.find(
+              (d) => d.contractId && d.contractId === f.contractId,
+            );
+            if (dependency) {
+              return {
+                ...f,
+                address: dependency.address,
+                abi: dependency.abi ?? f.abi,
+                compilerVersion: result.solidityVersion,
+                compiledAt: new Date().toISOString(),
+              };
+            }
+            return f;
+          })
         : state.files,
       analysis: result.ok && state.analysisContractId === contractId ? null : state.analysis,
       analyzedAt: result.ok && state.analysisContractId === contractId ? null : state.analyzedAt,

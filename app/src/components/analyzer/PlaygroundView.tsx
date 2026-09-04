@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  Blocks,
   CircleAlert,
   CircleCheck,
   Eye,
@@ -21,7 +22,7 @@ import { useProjectStore } from "@/store/project-store";
 import { CHAIN_SYMBOLS } from "@/store/wallet-store";
 import { usePlaygroundWalletBalance } from "@/hooks/usePlaygroundWalletBalance";
 import { mintWalletRequest } from "@/api/wallet";
-import type { AbiFragment, DeploymentResult, PlaygroundWallet } from "@/api/contracts";
+import type { AbiFragment, DeployedDependency, DeploymentResult, PlaygroundWallet } from "@/api/contracts";
 
 function isReadOnly(fragment: AbiFragment) {
   return fragment.stateMutability === "view" || fragment.stateMutability === "pure";
@@ -163,6 +164,38 @@ export function PlaygroundView() {
   );
 }
 
+// A dependency the constructor deployed itself (e.g. Vault's
+// `new Strategy(...)`) is clickable when it's also an open tab in this
+// project — its own playground already reflects the same deployed address
+// (see setCompileResult), so this just jumps there.
+function DependencyRow({ dependency }: { dependency: DeployedDependency }) {
+  const setActiveFile = useEditorStore((s) => s.setActiveFile);
+  const fileId = useEditorStore(
+    (s) => s.files.find((f) => f.contractId === dependency.contractId)?.id ?? null,
+  );
+
+  const content = (
+    <>
+      <span className="text-ink">{dependency.name ?? "Contract"}</span>
+      <span className="font-mono text-[11px] text-muted">{dependency.address}</span>
+    </>
+  );
+
+  if (!fileId) {
+    return <div className="flex items-center justify-between gap-2 px-1.5 py-1 text-xs">{content}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setActiveFile(fileId)}
+      className="flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-left text-xs transition-colors hover:bg-surface-muted"
+    >
+      {content}
+    </button>
+  );
+}
+
 // Keyed by contractId in the parent, so switching to a different compiled
 // tab remounts this (and its local wallet state) instead of needing a
 // synchronous reset inside an effect.
@@ -233,6 +266,17 @@ function PlaygroundBody({
               <ChainIcon chain={deployment.chain} className="size-3.5" />
               <span className="font-mono text-xs text-ink">{deployment.address}</span>
             </div>
+            {deployment.dependencies && deployment.dependencies.length > 0 && (
+              <div className="mt-1 flex flex-col gap-1 border-t border-border pt-2">
+                <span className="flex items-center gap-1.5 text-xs text-muted">
+                  <Blocks className="size-3.5" />
+                  Dependencies also deployed
+                </span>
+                {deployment.dependencies.map((dependency) => (
+                  <DependencyRow key={dependency.address} dependency={dependency} />
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex items-start gap-2 text-sm text-danger">

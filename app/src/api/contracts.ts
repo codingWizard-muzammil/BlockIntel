@@ -82,6 +82,16 @@ export type AbiFragment = {
 
 export type CompileDiagnostic = { message: string; severity?: string; formattedMessage?: string };
 
+export type DeployedDependency = {
+  name: string | null;
+  address: string;
+  // Set when this dependency is itself an open contract/tab in the project
+  // (e.g. a Strategy.sol Vault.sol imports) — lets the frontend populate
+  // that tab's own playground immediately, in this same session.
+  contractId: string | null;
+  abi: AbiFragment[] | null;
+};
+
 export type DeploymentResult = {
   ok: boolean;
   address: string | null;
@@ -91,6 +101,10 @@ export type DeploymentResult = {
   // address on this chain, not a shared devnet account.
   deployer: string | null;
   error: string | null;
+  // Other contracts the constructor deployed itself (e.g. a Vault's
+  // `import "./Strategy.sol"` + `new Strategy(...)`) — absent/empty when
+  // there weren't any.
+  dependencies?: DeployedDependency[];
 };
 
 export type CompileResult = {
