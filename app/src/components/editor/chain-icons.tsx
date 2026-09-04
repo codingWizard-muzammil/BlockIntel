@@ -1,5 +1,5 @@
 import type { ComponentType, SVGProps } from "react";
-import { SiEthereum, SiPolygon, SiBnbchain, SiOptimism, SiSolana } from "react-icons/si";
+import { SiEthereum, SiPolygon, SiBnbchain, SiOptimism } from "react-icons/si";
 import type { IconType } from "react-icons";
 
 function ArbitrumIcon(props: SVGProps<SVGSVGElement>) {
@@ -41,7 +41,6 @@ export const CHAIN_ICONS: Record<string, IconType | ComponentType<SVGProps<SVGSV
   arbitrum: ArbitrumIcon,
   optimism: SiOptimism,
   avalanche: AvalancheIcon,
-  solana: SiSolana,
 };
 
 export function ChainIcon({

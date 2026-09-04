@@ -9,9 +9,9 @@ import type { PlaygroundWallet } from "@/api/contracts";
 
 type RequestStatus = "idle" | "loading" | "success" | "error";
 
-// Every chain BlockIntel runs a local node for (every EVM chain plus
-// Solana) — a user gets a deterministic playground wallet on each of these,
-// not just whichever chain they happened to log in with.
+// Every chain BlockIntel runs a local node for — a user gets a
+// deterministic playground wallet on each of these, not just whichever
+// chain they happened to log in with.
 export const PLAYGROUND_CHAINS = CHAINS.map((c) => c.name);
 
 // Local node balances are still denominated in each chain's own native gas
@@ -98,9 +98,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 // Fund/refresh every chain's test wallet as soon as a session is confirmed,
 // and drop them when the session ends — same pattern project-store uses to
 // load the project list on login. Every chain gets its own wallet regardless
-// of which chain family the user logged in with (ethereum vs solana), since
-// the playground wallet is a synthetic per-(address, chain) derivation, not
-// the login wallet itself.
+// of which chain family the user logged in with, since the playground
+// wallet is a synthetic per-(address, chain) derivation, not the login
+// wallet itself.
 useAuthStore.subscribe((state, prevState) => {
   if (state.status === prevState.status) return;
 

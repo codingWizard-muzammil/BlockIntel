@@ -9,7 +9,7 @@ import type {
   DeploymentResult,
 } from "@/api/contracts";
 
-export type Extension = "sol" | "vyper" | "rs" | "move" | "";
+export type Extension = "sol" | "vyper" | "move" | "";
 
 type CompileStatus = {
   solidityVersion: string;
@@ -37,7 +37,6 @@ export const CHAINS = [
   { name: "arbitrum", symbol: "ARB" },
   { name: "optimism", symbol: "OP" },
   { name: "avalanche", symbol: "AVAX" },
-  { name: "solana", symbol: "SOL" },
 ];
 
 // Languages each chain's toolchain supports.
@@ -48,13 +47,11 @@ export const CHAIN_LANGUAGES: Record<string, string[]> = {
   arbitrum: ["solidity"],
   optimism: ["solidity"],
   avalanche: ["solidity"],
-  solana: ["rust"],
 };
 
 export const EXTENSION_BY_LANGUAGE: Record<string, Extension> = {
   solidity: "sol",
   vyper: "vyper",
-  rust: "rs",
   move: "move",
 };
 

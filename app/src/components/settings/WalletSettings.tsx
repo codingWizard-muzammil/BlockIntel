@@ -100,9 +100,7 @@ export function WalletSettings() {
           <PrivateKeyRow privateKey={active.wallet.privateKey} />
 
           <p className="text-xs text-muted">
-            {activeChain === "solana"
-              ? "This is your devnet wallet on the local Solana validator — it's derived from your connected wallet and only ever holds fake SOL on a local test node. Deploying and calling Solana programs from the Playground isn't wired up yet, but the wallet itself is live. Import the private key above into Phantom or Solflare to interact with it directly; never send real funds to it."
-              : `This wallet is deployer and signer for every contract you deploy or call on ${activeChain} in the Playground — it's derived from your connected wallet and only ever holds fake ${CHAIN_SYMBOLS[activeChain]} on a local test node. Import the private key above into MetaMask to interact with it directly; never send real funds to it.`}
+            {`This wallet is deployer and signer for every contract you deploy or call on ${activeChain} in the Playground — it's derived from your connected wallet and only ever holds fake ${CHAIN_SYMBOLS[activeChain]} on a local test node. Import the private key above into MetaMask to interact with it directly; never send real funds to it.`}
           </p>
         </div>
       ) : null}
