@@ -33,11 +33,19 @@ export function Header() {
         >
           Docs
         </Link>
-        <IconButton icon={GithubIcon} aria-label="GitHub" />
+        <Link href="https://github.com/codingWizard-muzammil/BlockIntel" target="_blank">
+          <IconButton
+            icon={GithubIcon}
+            aria-label="GitHub"
+            className="cursor-pointer"
+          />
+        </Link>
         <IconButton
           icon={resolvedTheme === "dark" ? Sun : Moon}
           aria-label={
-            resolvedTheme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+            resolvedTheme === "dark"
+              ? "Switch to light theme"
+              : "Switch to dark theme"
           }
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
         />

@@ -3,13 +3,8 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Code2, HelpCircle, History, Info } from "lucide-react";
+import { Code2, History } from "lucide-react";
 import { useProjectStore } from "@/store/project-store";
-
-const bottomItems = [
-  { href: "#", icon: HelpCircle, label: "Help" },
-  { href: "#", icon: Info, label: "Info" },
-];
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -54,19 +49,6 @@ export function Sidebar() {
           </Link>
         );
       })}
-
-      <div className="flex flex-1 flex-col items-center justify-end gap-6">
-        {bottomItems.map(({ href, icon: Icon, label }) => (
-          <Link
-            key={label}
-            href={href}
-            aria-label={label}
-            className="flex size-10 items-center justify-center rounded-lg text-muted transition-colors hover:text-ink"
-          >
-            <Icon className="size-3.5" />
-          </Link>
-        ))}
-      </div>
     </aside>
   );
 }
