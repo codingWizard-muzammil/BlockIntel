@@ -69,7 +69,7 @@ export function ContractSummaryCard({
         <>
           <p className="mb-2.5 text-sm leading-[22.75px] text-muted">
             Compiled successfully. Click Analyze for the AI-generated
-            description, key features, attacks & improvements.
+            description, key features, explainer & improvements.
           </p>
           <div className="border-t border-border pt-1">
             <Row label="Compiler" value={basicInfo.compiler} />

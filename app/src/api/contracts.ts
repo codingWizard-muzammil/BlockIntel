@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { ContractSummary, AttackScenario, Improvement } from "@/types/analysis";
+import type { ContractSummary, ContractExplainer, Improvement } from "@/types/analysis";
 
 export type ApiContract = {
   id: string;
@@ -168,7 +168,7 @@ export async function fetchPlaygroundWalletRequest(id: string) {
 export type AnalysisResult = {
   summary: ContractSummary;
   keyFeatures: string[];
-  attacks: AttackScenario[];
+  explainer: ContractExplainer;
   improvements: Improvement[];
 };
 

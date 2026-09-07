@@ -314,7 +314,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   // Compiles the contract and — for chains with a local node configured —
   // deploys it, then hands the result to editor-store so every gated view
-  // (Summary/Attacks/Improvements/Playground) can react to it. Deliberately
+  // (Summary/Explainer/Improvements/Playground) can react to it. Deliberately
   // does NOT also trigger AI analysis — Compile and Analyze are separate
   // user-initiated actions; Summary falls back to a compile-only "basic"
   // view (compiler/lines/gas) until Analyze is explicitly run.

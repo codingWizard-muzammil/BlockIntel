@@ -10,10 +10,19 @@ export type ContractSummary = {
   estimatedGasAvg: string;
 };
 
-export type AttackScenario = {
-  title: string;
-  severity: Severity;
+export type ExplainerFunction = {
+  name: string;
+  access: string;
   description: string;
+  // Deterministic, merged in from the contract's compiled ABI — absent
+  // until the contract has been compiled at least once.
+  signature?: string;
+  stateMutability?: string;
+};
+
+export type ContractExplainer = {
+  flow: string;
+  functions: ExplainerFunction[];
 };
 
 export type Improvement = {

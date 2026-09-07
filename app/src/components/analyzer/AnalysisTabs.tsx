@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FlaskConical, LayoutGrid, ShieldAlert, TrendingUp } from "lucide-react";
+import { FlaskConical, LayoutGrid, TrendingUp, Workflow } from "lucide-react";
 
 const tabs = [
   { slug: "summary", label: "Summary", icon: LayoutGrid },
-  { slug: "attacks", label: "Attacks", icon: ShieldAlert },
+  { slug: "explainer", label: "Explainer", icon: Workflow },
   { slug: "improvements", label: "Improvements", icon: TrendingUp },
   { slug: "playground", label: "Playground", icon: FlaskConical },
 ];

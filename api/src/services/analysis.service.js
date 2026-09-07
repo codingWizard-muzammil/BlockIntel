@@ -8,7 +8,7 @@ const { formatGasEstimate } = require("../utils/gas");
 const contractModel = new CorCrud("contracts");
 const analyzeModel = new CorCrud("analyze");
 
-const REQUIRED_KEYS = ["summary", "keyFeatures", "attacks", "improvements"];
+const REQUIRED_KEYS = ["summary", "keyFeatures", "explainer", "improvements"];
 
 // Only the gemini provider gets true schema-constrained decoding from this —
 // see JSON_SHAPE below for what the OpenAI-compatible providers work from.
@@ -34,18 +34,31 @@ const RESPONSE_SCHEMA = {
       items: { type: Type.STRING },
       description: "3-6 short bullet points naming notable mechanisms (e.g. 'Reentrancy guard on withdraw()').",
     },
-    attacks: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          title: { type: Type.STRING },
-          severity: { type: Type.STRING, enum: ["high", "medium", "low"] },
-          description: { type: Type.STRING, description: "How the attack would actually be carried out against this specific code." },
+    explainer: {
+      type: Type.OBJECT,
+      properties: {
+        flow: {
+          type: Type.STRING,
+          description: "2-4 sentences, plain English: the contract's overall lifecycle — what happens, in what order, as it's used.",
         },
-        required: ["title", "severity", "description"],
+        functions: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING, description: "The function's name, exactly as declared." },
+              access: {
+                type: Type.STRING,
+                description: "Plain English: who can call it — e.g. 'Anyone', 'Only the contract owner', 'Only after the lock period ends'.",
+              },
+              description: { type: Type.STRING, description: "Plain English: what happens when it's called." },
+            },
+            required: ["name", "access", "description"],
+          },
+          description: "One entry per public/external function.",
+        },
       },
-      description: "Concrete, contract-specific attack scenarios — skip if genuinely none apply.",
+      required: ["flow", "functions"],
     },
     improvements: {
       type: Type.ARRAY,
@@ -62,7 +75,7 @@ const RESPONSE_SCHEMA = {
       description: "Concrete, actionable improvements — gas, style, and security hardening.",
     },
   },
-  required: ["summary", "keyFeatures", "attacks", "improvements"],
+  required: ["summary", "keyFeatures", "explainer", "improvements"],
 };
 
 // Gemini gets a real `responseSchema` (RESPONSE_SCHEMA above); the
@@ -77,14 +90,17 @@ const JSON_SHAPE = `Respond with ONLY a single JSON object — no markdown, no c
     "visibility": string      // e.g. "Public", "Owner-restricted"
   },
   "keyFeatures": string[],    // 3-6 short bullet points naming notable mechanisms
-  "attacks": [{ "title": string, "severity": "high"|"medium"|"low", "description": string }],
+  "explainer": {
+    "flow": string,           // 2-4 sentences, plain English: the contract's overall lifecycle
+    "functions": [{ "name": string, "access": string, "description": string }]  // one per public/external function
+  },
   "improvements": [{ "title": string, "severity": "high"|"medium"|"low", "reason": string, "how": string }]
 }`;
 
 function buildPrompt({ language, name, source }) {
-  return `You are a senior smart contract security auditor. Analyze the following ${language} contract named "${name}" and report your findings as JSON.
+  return `You are a senior smart contract engineer. Analyze the following ${language} contract named "${name}" and report your findings as JSON.
 
-Be specific to THIS contract — reference its actual function and variable names. Do not invent generic boilerplate findings that don't apply to the code shown. If the contract has no real vulnerabilities, return an empty "attacks" array rather than padding it.
+Be specific to THIS contract — reference its actual function and variable names. Do not invent generic boilerplate findings that don't apply to the code shown. For the explainer, cover every public/external function: name it exactly as declared, state in plain English who is allowed to call it (anyone, owner-only, only under some condition), and what happens when it's called.
 
 ${JSON_SHAPE}
 
@@ -97,6 +113,23 @@ function countLinesOfCode(source) {
   return source.split("\n").filter((line) => line.trim().length > 0).length;
 }
 
+// Fills in signature/stateMutability from the contract's own compiled ABI
+// (deterministic) rather than trusting the model to report them — the model
+// only needs to describe access control and behavior, which the ABI alone
+// can't tell you.
+function enrichExplainerFunctions(functions, abi) {
+  if (!Array.isArray(abi)) return functions;
+  const byName = new Map(
+    abi.filter((f) => f.type === "function" && f.name).map((f) => [f.name, f]),
+  );
+  return functions.map((fn) => {
+    const fragment = byName.get(fn.name);
+    return fragment
+      ? { ...fn, signature: fragment.signature ?? fn.name, stateMutability: fragment.stateMutability }
+      : fn;
+  });
+}
+
 const analyzeContract = async ({ id, ownerAddress, force = false }) => {
   const contract = await contractModel.findOne({ id });
   if (!contract || contract.ownerAddress !== ownerAddress) {
@@ -107,7 +140,7 @@ const analyzeContract = async ({ id, ownerAddress, force = false }) => {
 
   // Serve the cached result as long as it was generated after the last edit
   // that changed the source (i.e. after the last compile), so switching
-  // between Summary/Attacks/Improvements tabs doesn't re-prompt the model.
+  // between Summary/Explainer/Improvements tabs doesn't re-prompt the model.
   const isFresh =
     existing?.analysis &&
     existing?.analyzedAt &&
@@ -153,7 +186,10 @@ const analyzeContract = async ({ id, ownerAddress, force = false }) => {
       estimatedGasAvg: formatGasEstimate(contract.gasEstimate) ?? "N/A",
     },
     keyFeatures: parsed.keyFeatures ?? [],
-    attacks: parsed.attacks ?? [],
+    explainer: {
+      flow: parsed.explainer?.flow ?? "",
+      functions: enrichExplainerFunctions(parsed.explainer?.functions ?? [], contract.abi),
+    },
     improvements: parsed.improvements ?? [],
   };
 

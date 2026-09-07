@@ -1,11 +1,11 @@
 "use client";
 
-import { CircleAlert, Loader2, ShieldAlert } from "lucide-react";
-import { PotentialAttacksCard } from "@/components/analyzer/PotentialAttacksCard";
+import { CircleAlert, Loader2, Workflow } from "lucide-react";
+import { ContractExplainerCard } from "@/components/analyzer/ContractExplainerCard";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { useEditorStore } from "@/store/editor-store";
 
-export function AttacksView() {
+export function ExplainerView() {
   const { compileStatus, analyzing, analysisError, analysis } =
     useEditorStore();
   const compiled = compileStatus.ok;
@@ -13,9 +13,9 @@ export function AttacksView() {
   if (!compiled && !analysis) {
     return (
       <ComingSoon
-        icon={ShieldAlert}
-        title="No attack scenarios yet"
-        description="Compile & analyze your contract to see potential attack vectors here."
+        icon={Workflow}
+        title="No explainer yet"
+        description="Compile & analyze your contract to see a plain-English walkthrough of its functions."
       />
     );
   }
@@ -25,7 +25,7 @@ export function AttacksView() {
       <ComingSoon
         icon={Loader2}
         title="Analyzing your contract…"
-        description="The AI model is looking for exploitable attack vectors."
+        description="The AI model is mapping out what each function does and who can call it."
       />
     );
   }
@@ -36,7 +36,7 @@ export function AttacksView() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PotentialAttacksCard attacks={analysis?.attacks ?? []} notAnalyzed={!analysis} />
+      <ContractExplainerCard explainer={analysis?.explainer ?? null} notAnalyzed={!analysis} />
     </div>
   );
 }

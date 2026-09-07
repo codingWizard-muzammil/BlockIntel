@@ -620,7 +620,7 @@ export const useEditorStore = create<EditorState>((set) => ({
                 // analyze call fires on its own, so the last AI analysis is
                 // left in place rather than blanked out here. It may now
                 // describe a slightly older version of the source, but
-                // that's better than losing the summary/attacks/improvements
+                // that's better than losing the summary/explainer/improvements
                 // views until the user reloads or re-analyzes; the
                 // deterministic compiler/lines/gas fields are sourced live
                 // from compileStatus regardless (see ContractSummaryCard).

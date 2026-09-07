@@ -4,8 +4,6 @@ import { CircleAlert, LayoutGrid, Loader2 } from "lucide-react";
 import { ContractSummaryCard } from "@/components/analyzer/ContractSummaryCard";
 import { KeyFeaturesCard } from "@/components/analyzer/KeyFeaturesCard";
 import { ProjectDetailsCard } from "@/components/analyzer/ProjectDetailsCard";
-import { PotentialAttacksCard } from "@/components/analyzer/PotentialAttacksCard";
-import { ImprovementsCard } from "@/components/analyzer/ImprovementsCard";
 import { useGatedProject } from "@/components/analyzer/ProjectStateGate";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { useEditorStore } from "@/store/editor-store";
@@ -46,7 +44,7 @@ export function SummaryView() {
       <ComingSoon
         icon={Loader2}
         title="Analyzing your contract…"
-        description="The AI model is reviewing your code for a summary, attacks, and improvements."
+        description="The AI model is reviewing your code for a summary, explainer, and improvements."
       />
     );
   }
