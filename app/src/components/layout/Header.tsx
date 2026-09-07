@@ -28,7 +28,7 @@ export function Header() {
       </div>
       <div className="flex items-center gap-4">
         <Link
-          href="#"
+          href="/docs"
           className="text-sm text-muted transition-colors hover:text-ink"
         >
           Docs
