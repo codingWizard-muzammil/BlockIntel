@@ -16,6 +16,10 @@ const DEV_DEPLOYER_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 const TARGET_BALANCE_WEI = ethers.parseEther("100");
+// Only refill once the wallet can no longer reliably pay gas. Topping up
+// whenever it dips below TARGET_BALANCE_WEI would silently undo every
+// payable deposit before the next call, hiding the contract's real effect.
+const MIN_GAS_BALANCE_WEI = ethers.parseEther("0.01");
 const MINT_AMOUNT_WEI = ethers.parseEther("100");
 
 // Deterministic per-(user, chain) EOA used for every playground deploy/call,
@@ -33,11 +37,11 @@ function derivePlaygroundWallet(ownerAddress, chain) {
 // Every user gets their own deterministic wallet per chain so contract
 // interactions carry their own identity as `msg.sender` — but a freshly
 // derived wallet starts at a zero balance, so top it up from the shared
-// devnet faucet up to a flat 100 ETH target whenever it runs low.
+// devnet faucet to a flat 100 ETH target once it's (nearly) empty.
 async function ensureFunded(ownerAddress, chain, provider) {
   const wallet = derivePlaygroundWallet(ownerAddress, chain).connect(provider);
   const balance = await provider.getBalance(wallet.address);
-  if (balance < TARGET_BALANCE_WEI) {
+  if (balance < MIN_GAS_BALANCE_WEI) {
     const funder = new ethers.Wallet(DEV_DEPLOYER_KEY, provider);
     const tx = await funder.sendTransaction({
       to: wallet.address,

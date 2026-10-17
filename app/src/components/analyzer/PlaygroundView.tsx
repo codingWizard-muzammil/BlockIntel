@@ -28,6 +28,17 @@ function isReadOnly(fragment: AbiFragment) {
   return fragment.stateMutability === "view" || fragment.stateMutability === "pure";
 }
 
+// Converts a decimal native-token amount (e.g. "1.5") to a wei string, since
+// the backend's `valueWei` expects an integer and nobody types 18 zeros.
+function toWei(amount: string): string {
+  if (!/^\d*\.?\d*$/.test(amount) || amount === ".") {
+    throw new Error(`Invalid amount "${amount}"`);
+  }
+  const [whole, fraction = ""] = amount.split(".");
+  if (fraction.length > 18) throw new Error("Amount has more than 18 decimal places");
+  return (BigInt(whole || "0") * BigInt(10) ** BigInt(18) + BigInt(fraction.padEnd(18, "0"))).toString();
+}
+
 function FunctionCard({
   contractId,
   fragment,
@@ -55,7 +66,7 @@ function FunctionCard({
       const response = await callContractFunction(contractId, {
         functionName: fragment.signature ?? fragment.name ?? "",
         args: values,
-        valueWei: payable && ethValue.trim() ? ethValue.trim() : undefined,
+        valueWei: payable && ethValue.trim() ? toWei(ethValue.trim()) : undefined,
       });
       if (response.walletBalance) onBalanceChange(response.walletBalance);
       if (response.txHash) {
@@ -99,7 +110,7 @@ function FunctionCard({
 
       {payable && (
         <input
-          placeholder="value (wei)"
+          placeholder="value (ETH, e.g. 1.5)"
           value={ethValue}
           onChange={(e) => setEthValue(e.target.value)}
           className="mb-3 w-full rounded-md border border-border bg-input px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
