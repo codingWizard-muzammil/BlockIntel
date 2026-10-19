@@ -169,3 +169,13 @@ body {
     animation: none;
   }
 }
+
+/* Lines just written by the editor's inline AI prompt, until kept/undone. */
+.monaco-editor .ai-inserted-line {
+  background: var(--color-accent-soft-strong);
+}
+
+.monaco-editor .ai-inserted-gutter {
+  border-left: 3px solid var(--color-accent);
+  margin-left: 3px;
+}

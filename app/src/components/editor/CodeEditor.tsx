@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import type { Monaco } from "@monaco-editor/react";
+import type { editor as MonacoEditor } from "monaco-editor";
+import { Sparkles } from "lucide-react";
 import { useEditorStore } from "@/store/editor-store";
 import { useProjectStore } from "@/store/project-store";
 import { usePreferencesStore, type EditorColors } from "@/store/preferences-store";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { AiInlinePrompt } from "@/components/editor/AiInlinePrompt";
 
 const AUTOSAVE_DELAY_MS = 1200;
 
@@ -326,6 +329,10 @@ const beforeMount: BeforeMount = (monaco) => {
   defineThemes(monaco, usePreferencesStore.getState().editorColors);
 };
 
+function shortcutLabel() {
+  return /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘I" : "Ctrl+I";
+}
+
 export function CodeEditor() {
   const { source, setSource, language, activeFileId } = useEditorStore();
   const { updateContract, saveContract } = useProjectStore();
@@ -338,9 +345,33 @@ export function CodeEditor() {
     editorColors,
   } = usePreferencesStore();
   const monacoRef = useRef<Monaco | null>(null);
+  const [mounted, setMounted] = useState<{
+    editor: MonacoEditor.IStandaloneCodeEditor;
+    monaco: Monaco;
+  } | null>(null);
+  // One inline AI prompt at a time, tied to the file it was opened on. A
+  // fresh `id` remounts the prompt so reopening it re-captures the
+  // selection.
+  const [aiSession, setAiSession] = useState<{ id: number; fileId: string } | null>(null);
 
-  const handleMount: OnMount = (_editor, monaco) => {
+  // Switching files dismisses the prompt (unmounting it cleans up its view
+  // zone, decorations and any in-flight request).
+  if (aiSession && aiSession.fileId !== activeFileId) setAiSession(null);
+
+  const openAiPrompt = () =>
+    setAiSession({ id: Date.now(), fileId: useEditorStore.getState().activeFileId });
+
+  const handleMount: OnMount = (editor, monaco) => {
     monacoRef.current = monaco;
+    setMounted({ editor, monaco });
+    editor.addAction({
+      id: "blockintel.ai-write",
+      label: "Write with AI",
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI],
+      contextMenuGroupId: "navigation",
+      contextMenuOrder: 0,
+      run: openAiPrompt,
+    });
   };
 
   // Re-apply the theme definitions live when the user tweaks a syntax color
@@ -385,47 +416,79 @@ export function CodeEditor() {
   }, [activeFileId, flushSave]);
 
   return (
-    <Editor
-      language={language ?? "plaintext"}
-      value={source}
-      theme={resolvedTheme === "light" ? "blockintel-light" : "blockintel-dark"}
-      beforeMount={beforeMount}
-      onMount={handleMount}
-      onChange={(value) => {
-        const next = value ?? "";
-        setSource(next);
-        // Read fresh state rather than a closed-over selector — this only
-        // fires on genuine user edits (Monaco doesn't re-fire onChange for
-        // programmatic `value` prop updates), so it's safe to autosave here.
-        const state = useEditorStore.getState();
-        const activeFile = state.files.find((f) => f.id === state.activeFileId);
-        if (activeFile) {
-          debouncedSave(activeFile.id, next);
+    <div className="relative size-full overflow-hidden">
+      <Editor
+        language={language ?? "plaintext"}
+        value={source}
+        theme={resolvedTheme === "light" ? "blockintel-light" : "blockintel-dark"}
+        beforeMount={beforeMount}
+        onMount={handleMount}
+        onChange={(value) => {
+          const next = value ?? "";
+          setSource(next);
+          // Read fresh state rather than a closed-over selector — this only
+          // fires on genuine user edits (Monaco doesn't re-fire onChange for
+          // programmatic `value` prop updates), so it's safe to autosave here.
+          const state = useEditorStore.getState();
+          const activeFile = state.files.find((f) => f.id === state.activeFileId);
+          if (activeFile) {
+            debouncedSave(activeFile.id, next);
+          }
+        }}
+        loading={
+          <div className="flex size-full items-center justify-center bg-canvas text-xs text-muted">
+            Loading editor…
+          </div>
         }
-      }}
-      loading={
-        <div className="flex size-full items-center justify-center bg-canvas text-xs text-muted">
-          Loading editor…
-        </div>
-      }
-      options={{
-        fontSize: editorFontSize,
-        fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
-        lineHeight: 24,
-        minimap: { enabled: editorMinimap },
-        scrollBeyondLastLine: false,
-        automaticLayout: true,
-        padding: { top: 8, bottom: 8 },
-        renderLineHighlight: "line",
-        tabSize: editorTabSize,
-        wordWrap: editorWordWrap ? "on" : "off",
-        smoothScrolling: true,
-        cursorBlinking: "smooth",
-        scrollbar: {
-          verticalScrollbarSize: 10,
-          horizontalScrollbarSize: 10,
-        },
-      }}
-    />
+        options={{
+          fontSize: editorFontSize,
+          fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
+          lineHeight: 24,
+          minimap: { enabled: editorMinimap },
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+          padding: { top: 8, bottom: 8 },
+          renderLineHighlight: "line",
+          tabSize: editorTabSize,
+          wordWrap: editorWordWrap ? "on" : "off",
+          smoothScrolling: true,
+          cursorBlinking: "smooth",
+          scrollbar: {
+            verticalScrollbarSize: 10,
+            horizontalScrollbarSize: 10,
+          },
+        }}
+      />
+      {mounted && aiSession && (
+        <AiInlinePrompt
+          key={aiSession.id}
+          editor={mounted.editor}
+          monaco={mounted.monaco}
+          onClose={() => setAiSession((current) => (current?.id === aiSession.id ? null : current))}
+        />
+      )}
+      {mounted && !aiSession && !source && (
+        <p
+          style={{ left: mounted.editor.getLayoutInfo().contentLeft, fontSize: editorFontSize }}
+          className="pointer-events-none absolute top-2 font-mono leading-6 text-muted/70"
+        >
+          Start typing, or press {shortcutLabel()} to write with AI
+        </p>
+      )}
+      {mounted && !aiSession && (
+        <button
+          type="button"
+          onClick={openAiPrompt}
+          title={`Write with AI (${shortcutLabel()}) — select code first to edit just that part`}
+          // Clear of the minimap/scrollbar rather than floating over them.
+          style={{ right: editorMinimap ? 112 : 20 }}
+          className="absolute bottom-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-surface/90 px-3 py-1.5 text-xs font-medium text-ink shadow-md shadow-black/10 backdrop-blur transition-colors hover:border-accent hover:bg-accent-soft"
+        >
+          <Sparkles className="size-3.5 text-accent" />
+          Ask AI
+          <kbd className="text-[10px] text-muted">{shortcutLabel()}</kbd>
+        </button>
+      )}
+    </div>
   );
 }
