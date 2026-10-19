@@ -39,6 +39,16 @@ async function callOpenAiCompatible({ url, apiKey, model, prompt, headers = {} }
 
   const body = await res.json().catch(() => null);
   if (!res.ok) {
+    // Groq validates json_object output server-side and 400s if it doesn't
+    // parse — but the rejected text (often valid JSON with a stray fence or
+    // trailing prose around it) comes back as `failed_generation`. Hand it to
+    // parseJson instead of discarding it; if it's truly broken, parseJson
+    // throws and generateJson moves on to the next model as before.
+    const failedGeneration = body?.error?.failed_generation;
+    if (res.status === 400 && typeof failedGeneration === "string" && failedGeneration.trim()) {
+      logger.warn("Salvaging failed_generation from JSON-mode rejection", { model, error: body.error.message });
+      return failedGeneration;
+    }
     throw new Error(`${res.status} ${body?.error?.message || res.statusText}`);
   }
 

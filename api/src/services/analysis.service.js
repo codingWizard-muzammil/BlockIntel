@@ -72,7 +72,8 @@ const RESPONSE_SCHEMA = {
         },
         required: ["title", "severity", "reason", "how"],
       },
-      description: "Concrete, actionable improvements — gas, style, and security hardening.",
+      description:
+        "Real, verified issues only, most severe first. An empty array is the correct answer for a contract with no genuine issues — never pad it.",
     },
   },
   required: ["summary", "keyFeatures", "explainer", "improvements"],
@@ -95,12 +96,37 @@ const JSON_SHAPE = `Respond with ONLY a single JSON object — no markdown, no c
     "functions": [{ "name": string, "access": string, "description": string }]  // one per public/external function
   },
   "improvements": [{ "title": string, "severity": "high"|"medium"|"low", "reason": string, "how": string }]
+                              // real issues only, most severe first; [] if the contract has none
 }`;
 
 function buildPrompt({ language, name, source }) {
-  return `You are a senior smart contract engineer. Analyze the following ${language} contract named "${name}" and report your findings as JSON.
+  return `You are a senior smart contract security auditor. Review the following ${language} contract named "${name}" and report your findings as JSON.
 
-Be specific to THIS contract — reference its actual function and variable names. Do not invent generic boilerplate findings that don't apply to the code shown. For the explainer, cover every public/external function: name it exactly as declared, state in plain English who is allowed to call it (anyone, owner-only, only under some condition), and what happens when it's called.
+## How to review
+Read the whole contract before writing anything. Check it against, at minimum:
+- Access control: missing/incorrect modifiers, unprotected initializers, tx.origin auth, privileged functions anyone can call.
+- Reentrancy: external calls or value transfers before state updates (checks-effects-interactions), cross-function reentrancy.
+- Value handling: unchecked low-level call/send return values, stuck ETH, unsafe ERC-20 transfers (missing SafeERC20 / return checks).
+- Arithmetic: overflow/underflow (pre-0.8 Solidity or \`unchecked\` blocks), precision loss, division before multiplication.
+- Logic bugs: wrong conditions, off-by-one errors, state that can't be updated or reset, broken invariants.
+- Denial of service: unbounded loops over user-growable arrays, a single failing recipient blocking everyone.
+- Oracle/price manipulation, front-running/MEV exposure, block.timestamp or blockhash used for randomness.
+- delegatecall/selfdestruct misuse, storage collisions in upgradeable patterns.
+- Compiler/pragma issues: floating pragma, known-buggy compiler versions.
+- Gas: storage reads in loops, values that could be constant/immutable, redundant storage writes.
+
+## Rules for "improvements"
+- Report ONLY issues that genuinely exist in THIS code. Every entry must name the specific function or variable it concerns.
+- Do NOT pad the list with generic advice ("add more tests", "add NatSpec comments", "consider an audit", "use the latest compiler") unless there is a concrete problem behind it.
+- Do NOT report something as a vulnerability if the code already guards against it (e.g. reentrancy on a function with nonReentrant, overflow on Solidity >= 0.8 without \`unchecked\`).
+- If the contract is clean and well-written, return an EMPTY "improvements" array. That is a correct, expected answer, not a failure — a short honest list beats a long padded one.
+- Severity: "high" = funds can be lost/stolen/locked or access control broken; "medium" = incorrect behavior, DoS, or exploitable under realistic conditions; "low" = gas, best-practice, or hardening with no direct exploit.
+- Order entries from most to least severe. In "how", give the concrete code change (e.g. which line/modifier/check to add), not a vague direction.
+
+## Rules for the other fields
+- Be specific to THIS contract — use its actual function and variable names.
+- "keyFeatures": the mechanisms the contract actually implements (including security measures it gets right).
+- "explainer": cover every public/external function, named exactly as declared; say in plain English who can call it (anyone, owner-only, only under some condition) and what happens when it's called.
 
 ${JSON_SHAPE}
 
