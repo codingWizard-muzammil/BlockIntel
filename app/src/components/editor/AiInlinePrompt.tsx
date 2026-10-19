@@ -12,6 +12,9 @@ type Phase = "prompt" | "loading" | "review";
 type Target = {
   // Line the prompt is anchored above.
   anchorLine: number;
+  // An empty file gets a centered empty-state card instead of an inline
+  // prompt wedged above a blank line 1.
+  emptyFile: boolean;
   // Set when the user had text highlighted — the AI then rewrites only
   // that span instead of the whole file.
   selection: { range: IRange; text: string } | null;
@@ -28,16 +31,18 @@ const ZONE_GAP_PX = 12;
 function captureTarget(editor: MonacoEditor.IStandaloneCodeEditor, monaco: Monaco): Target {
   const model = editor.getModel();
   const selection = editor.getSelection();
-  if (model && selection && !selection.isEmpty()) {
+  const emptyFile = !model?.getValue().trim();
+  if (model && selection && !selection.isEmpty() && !emptyFile) {
     return {
       anchorLine: selection.startLineNumber,
+      emptyFile,
       selection: {
         range: selection,
         text: model.getValueInRange(selection, monaco.editor.EndOfLinePreference.LF),
       },
     };
   }
-  return { anchorLine: editor.getPosition()?.lineNumber ?? 1, selection: null };
+  return { anchorLine: editor.getPosition()?.lineNumber ?? 1, emptyFile, selection: null };
 }
 
 // 1-based line/column of `offset` within LF-normalized `text`.
@@ -81,7 +86,6 @@ export function AiInlinePrompt({
   onClose: () => void;
 }) {
   const language = useEditorStore((s) => s.language);
-  const isEmptyFile = useEditorStore((s) => !s.source.trim());
   const writeCodeWithAi = useProjectStore((s) => s.writeCodeWithAi);
 
   const [target] = useState(() => captureTarget(editor, monaco));
@@ -116,8 +120,12 @@ export function AiInlinePrompt({
   };
 
   useLayoutEffect(() => {
-    placeZone(target.anchorLine - 1);
-    editor.revealLineInCenterIfOutsideViewport(target.anchorLine);
+    // An empty file's card is centered instead — it only moves inline (into
+    // a view zone, see applyCode) once there's generated code to review.
+    if (!target.emptyFile) {
+      placeZone(target.anchorLine - 1);
+      editor.revealLineInCenterIfOutsideViewport(target.anchorLine);
+    }
     inputRef.current?.focus();
 
     const layoutListener = editor.onDidLayoutChange(setLayout);
@@ -283,17 +291,24 @@ export function AiInlinePrompt({
 
   const modeLabel = target.selection
     ? `Edit lines ${target.selection.range.startLineNumber}–${target.selection.range.endLineNumber}`
-    : isEmptyFile
+    : target.emptyFile
       ? "Generate contract"
       : "Edit file";
 
+  const centered = target.emptyFile && phase !== "review";
   const width = Math.max(240, Math.min(640, layout.contentWidth - 24));
 
   return (
     <div
       ref={overlayRef}
-      style={{ top: top ?? 0, left: layout.contentLeft, width, visibility: top == null ? "hidden" : "visible" }}
-      className="absolute z-20 rounded-lg border border-accent/50 bg-surface text-ink shadow-lg shadow-black/20"
+      style={
+        centered
+          ? { width: "min(520px, calc(100% - 48px))" }
+          : { top: top ?? 0, left: layout.contentLeft, width, visibility: top == null ? "hidden" : "visible" }
+      }
+      className={`absolute z-20 rounded-lg border border-accent/50 bg-surface text-ink shadow-lg shadow-black/20 ${
+        centered ? "left-1/2 top-[12%] -translate-x-1/2" : ""
+      }`}
       onKeyDown={(event) => {
         if (event.key !== "Escape") return;
         event.preventDefault();
@@ -365,7 +380,7 @@ export function AiInlinePrompt({
             placeholder={
               target.selection
                 ? "Describe how to change the selected code…"
-                : isEmptyFile
+                : target.emptyFile
                   ? "Describe the contract you want to write…"
                   : "Describe what to add or change…"
             }
@@ -386,16 +401,18 @@ export function AiInlinePrompt({
         <p className="px-3 pb-2.5 text-[11px] text-muted">Writing code… press Esc to cancel</p>
       )}
       {error && phase === "prompt" && <p className="px-3 pb-2.5 text-[11px] text-danger">{error}</p>}
-      {phase === "prompt" && isEmptyFile && !target.selection && !instruction && (
-        <div className="flex flex-wrap gap-1.5 px-3 pb-2.5">
+      {phase === "prompt" && target.emptyFile && !instruction && (
+        <div className="border-t border-border px-1.5 pb-1.5 pt-2">
+          <p className="px-1.5 pb-1 text-[10px] uppercase tracking-wide text-muted">Try an example</p>
           {STARTER_PROMPTS.map((prompt) => (
             <button
               key={prompt}
               type="button"
               onClick={() => submit(prompt)}
-              className="rounded-full border border-border bg-input px-2.5 py-0.5 text-[11px] text-muted hover:border-accent/60 hover:text-ink"
+              className="group flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-xs text-muted hover:bg-surface-muted hover:text-ink"
             >
-              {prompt}
+              <span className="min-w-0 flex-1 truncate">{prompt}</span>
+              <ArrowUp className="size-3 shrink-0 rotate-45 opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
           ))}
         </div>
