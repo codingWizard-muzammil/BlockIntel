@@ -29,6 +29,7 @@ import {
   type CallFunctionResult,
   type PlaygroundWallet,
 } from "@/api/contracts";
+import { writeCodeRequest, type WriteCodeInput } from "@/api/ai";
 import type { Improvement } from "@/types/analysis";
 import { useEditorStore } from "./editor-store";
 
@@ -49,6 +50,27 @@ const lastSavedSourceByContract = new Map<string, string>();
 // resolves, `updateContractMeta` chains onto this instead of firing a
 // second create for the same file — see the comment on `saveContract`.
 const pendingContractCreation = new Map<string, Promise<ApiContract>>();
+
+// ContractShell opens one tab per contract from the store's cached copy of
+// the project as soon as it mounts — before its own refetch lands, which it
+// then ignores so it can't clobber unsaved edits. So every contract
+// create/rename/delete has to patch that cached copy too, or e.g. a deleted
+// file reappears as a tab the next time the project is opened.
+function updateProjectContracts(
+  projects: ApiProject[],
+  projectId: string,
+  update: (contracts: ApiContract[]) => ApiContract[],
+) {
+  return projects.map((p) =>
+    p.id === projectId ? { ...p, contracts: update(p.contracts ?? []) } : p,
+  );
+}
+
+function upsertContract(contracts: ApiContract[], contract: ApiContract) {
+  return contracts.some((c) => c.id === contract.id)
+    ? contracts.map((c) => (c.id === contract.id ? contract : c))
+    : [...contracts, contract];
+}
 
 type ProjectState = {
   activeProjectId: string | null;
@@ -90,6 +112,10 @@ type ProjectState = {
   compileContract: (contractId: string) => Promise<void>;
   analyzeContract: (contractId: string, force?: boolean) => Promise<void>;
   applyImprovement: (contractId: string, improvement: Improvement) => Promise<boolean>;
+  writeCodeWithAi: (
+    input: WriteCodeInput,
+    signal?: AbortSignal,
+  ) => Promise<{ ok: true; code: string } | { ok: false; message: string }>;
   callContractFunction: (
     contractId: string,
     input: CallFunctionInput,
@@ -222,7 +248,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       .then((contract) => {
         lastSavedSourceByContract.set(contract.id, input.source ?? "");
         useEditorStore.getState().setFileContract(fileId, contract);
-        queryClient.invalidateQueries({ queryKey: ["projects", input.projectId] });
+        set((state) => ({
+          projects: updateProjectContracts(state.projects, contract.projectId, (contracts) =>
+            upsertContract(contracts, contract),
+          ),
+        }));
+        // The whole "projects" prefix — the list query embeds each project's
+        // contracts too, and would otherwise re-serve the stale list.
+        queryClient.invalidateQueries({ queryKey: ["projects"] });
         return contract;
       })
       .catch((error) => {
@@ -267,7 +300,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const applyUpdate = (id: string) =>
       updateContractMetaRequest(id, input).then((contract) => {
         useEditorStore.getState().setFileContract(fileId, contract);
-        queryClient.invalidateQueries({ queryKey: ["projects", contract.projectId] });
+        set((state) => ({
+          projects: updateProjectContracts(state.projects, contract.projectId, (contracts) =>
+            upsertContract(contracts, contract),
+          ),
+        }));
+        queryClient.invalidateQueries({ queryKey: ["projects"] });
       });
 
     const pendingCreate = contractId ? null : pendingContractCreation.get(fileId);
@@ -300,8 +338,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ deleteContractStatus: "loading", deleteContractError: null });
     try {
       await deleteContractRequest(contractId);
-      queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
-      set({ deleteContractStatus: "success" });
+      set((state) => ({
+        deleteContractStatus: "success",
+        projects: updateProjectContracts(state.projects, projectId, (contracts) =>
+          contracts.filter((c) => c.id !== contractId),
+        ),
+      }));
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       return true;
     } catch (error) {
       set({
@@ -368,6 +411,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     } catch (error) {
       console.error("Failed to apply improvement", error);
       return false;
+    }
+  },
+
+  // Generates code for the editor's inline AI prompt. Nothing is persisted
+  // here — the caller applies the result to the editor buffer, and the
+  // normal autosave path picks it up from there.
+  writeCodeWithAi: async (input, signal) => {
+    try {
+      const code = await writeCodeRequest(input, signal);
+      return { ok: true, code };
+    } catch (error) {
+      return { ok: false, message: (error as Error).message };
     }
   },
 
