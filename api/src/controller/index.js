@@ -3,5 +3,6 @@ module.exports = {
     project: require("./project.controller"),
     contract: require("./contract.controller"),
     wallet: require("./wallet.controller"),
-    analysis: require("./analysis.controller")
+    analysis: require("./analysis.controller"),
+    ai: require("./ai.controller")
 }

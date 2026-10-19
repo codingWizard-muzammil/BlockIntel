@@ -4,5 +4,6 @@ module.exports = {
     contract: require("./contract.service"),
     compile: require("./compile.service"),
     analysis: require("./analysis.service"),
-    wallet: require("./wallet.service")
+    wallet: require("./wallet.service"),
+    ai: require("./ai.service")
 }
