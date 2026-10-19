@@ -22,6 +22,16 @@ const TARGET_BALANCE_WEI = ethers.parseEther("100");
 const MIN_GAS_BALANCE_WEI = ethers.parseEther("0.01");
 const MINT_AMOUNT_WEI = ethers.parseEther("100");
 
+// ethers v6 shares identical RPC requests made within 250ms by default. On a
+// local node a funding tx mines faster than that, so reading a balance right
+// after reading it once before the tx returned the stale pre-tx value (e.g. a
+// freshly funded wallet showing 0.0, then 200 after one +100 mint). These
+// providers only ever talk to a local devnet, so there's nothing to save by
+// caching — always read live.
+function createChainProvider(rpcUrl) {
+  return new ethers.JsonRpcProvider(rpcUrl, undefined, { cacheTimeout: -1 });
+}
+
 // Deterministic per-(user, chain) EOA used for every playground deploy/call,
 // so `msg.sender` inside a contract is the connected wallet itself rather
 // than one devnet account shared by every user. Nothing needs to be stored —
@@ -62,4 +72,4 @@ async function mintFunds(ownerAddress, chain, provider) {
   return wallet;
 }
 
-module.exports = { derivePlaygroundWallet, ensureFunded, mintFunds };
+module.exports = { createChainProvider, derivePlaygroundWallet, ensureFunded, mintFunds };

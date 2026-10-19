@@ -1,7 +1,7 @@
 const { ethers } = require("ethers");
 const logger = require("../utils/logger");
 const { CHAIN_RPC_URLS } = require("../constants/chains");
-const { ensureFunded, mintFunds } = require("../utils/playgroundWallet");
+const { createChainProvider, ensureFunded, mintFunds } = require("../utils/playgroundWallet");
 const { get, set, CACHE_CONFIG } = require("../utils/redis");
 
 function isUnreachable(error) {
@@ -27,7 +27,7 @@ const getWallet = async ({ address, chain }) => {
   }
 
   try {
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const provider = createChainProvider(rpcUrl);
     const wallet = await ensureFunded(address, chain, provider);
     const balance = await provider.getBalance(wallet.address);
     return {
@@ -61,7 +61,7 @@ const mintWallet = async ({ address, chain }) => {
   }
 
   try {
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const provider = createChainProvider(rpcUrl);
     const wallet = await mintFunds(address, chain, provider);
     await set(cooldownKey, true, CACHE_CONFIG.ttlByType.mint);
     const balance = await provider.getBalance(wallet.address);

@@ -7,7 +7,7 @@ const CorCrud = require("../utils/CorCrud");
 const logger = require("../utils/logger");
 const { formatGasEstimate } = require("../utils/gas");
 const { CHAIN_RPC_URLS } = require("../constants/chains");
-const { derivePlaygroundWallet, ensureFunded } = require("../utils/playgroundWallet");
+const { createChainProvider, derivePlaygroundWallet, ensureFunded } = require("../utils/playgroundWallet");
 const walletService = require("./wallet.service");
 
 const contractModel = new CorCrud("contracts");
@@ -197,7 +197,7 @@ async function deployToChain({ chain, ownerAddress, abi, bytecode, allContracts 
   }
 
   try {
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const provider = createChainProvider(rpcUrl);
     const wallet = await ensureFunded(ownerAddress, chain, provider);
     const factory = new ethers.ContractFactory(abi, bytecode, wallet);
     const constructorInputs = abi.find((f) => f.type === "constructor")?.inputs ?? [];
@@ -419,7 +419,7 @@ const callFunction = async ({ id, ownerAddress, functionName, args = [], valueWe
   const isWrite = fragment.stateMutability !== "view" && fragment.stateMutability !== "pure";
 
   try {
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const provider = createChainProvider(rpcUrl);
     // Every call runs as the connected user's own playground wallet, not a
     // shared devnet account — only a write needs it topped up with gas.
     const wallet = isWrite

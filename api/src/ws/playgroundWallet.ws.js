@@ -2,7 +2,7 @@ const { WebSocketServer } = require("ws");
 const { ethers } = require("ethers");
 const { verifyToken } = require("../utils/jwt");
 const { CHAIN_RPC_URLS } = require("../constants/chains");
-const { derivePlaygroundWallet } = require("../utils/playgroundWallet");
+const { createChainProvider, derivePlaygroundWallet } = require("../utils/playgroundWallet");
 const CorCrud = require("../utils/CorCrud");
 const logger = require("../utils/logger");
 
@@ -26,7 +26,7 @@ function getProvider(chain) {
   let provider = providersByChain.get(chain);
   if (provider) return provider;
 
-  provider = new ethers.JsonRpcProvider(CHAIN_RPC_URLS[chain]);
+  provider = createChainProvider(CHAIN_RPC_URLS[chain]);
   provider.on("block", () => {
     onBlock(chain).catch((error) => {
       logger.error("Playground wallet block watcher failed", { error: error.message, chain });
